@@ -216,3 +216,27 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# UFC predictor: local datasets and generated outputs
+data/*.csv
+data/processed/
+artifacts/*
+!artifacts/.gitkeep
+reports/*
+!reports/.gitkeep
+*.joblib
+*.pkl
+*.pickle
+*.onnx
+
+# Local configuration and credentials
+.env.*
+!.env.example
+secrets/
+credentials/
+
+# Editors and OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
