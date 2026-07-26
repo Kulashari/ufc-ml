@@ -7,6 +7,8 @@ read arbitrary files from the host machine.
 
 from __future__ import annotations
 
+import re
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -16,8 +18,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ufc_predictor.config import AppConfig, load_config
+from ufc_predictor.data import load_fighter_snapshots, validate_snapshot_frame
 from ufc_predictor.exceptions import UFCPredictorError
+from ufc_predictor.inference.fighter_lookup import (
+    AmbiguousFighterError,
+    FighterLookup,
+    FighterLookupError,
+    SnapshotUnavailableError,
+)
+from ufc_predictor.inference.predictor import SameFighterError
 from ufc_predictor.workflows import predict_fight
+
+_FIGHTER_ID_PATTERN = re.compile(r"\b[0-9a-f]{12,}\b", re.IGNORECASE)
 
 
 class PredictionRequest(BaseModel):
@@ -27,7 +39,6 @@ class PredictionRequest(BaseModel):
 
     fighter_a: str = Field(min_length=1, max_length=160)
     fighter_b: str = Field(min_length=1, max_length=160)
-    prediction_date: date
     division: str | None = Field(default=None, max_length=80)
 
     @field_validator("division")
@@ -44,12 +55,82 @@ class HealthResponse(BaseModel):
     status: str
     artifact_version: str
     dataset_cutoff: date
+    snapshot_start_date: date
+    snapshot_end_date: date
 
 
-def _friendly_prediction_error(error: Exception) -> HTTPException:
-    """Turn expected prediction failures into form-friendly HTTP responses."""
+@dataclass(frozen=True)
+class SnapshotAvailability:
+    """Snapshot bounds and identity lookup shared by local API requests."""
 
-    return HTTPException(status_code=422, detail=str(error))
+    snapshot_start_date: date
+    snapshot_end_date: date
+    lookup: FighterLookup
+
+
+def _fighter_name(lookup: FighterLookup, fighter_id: str) -> str:
+    """Resolve an internal ID for a user-facing message without exposing it."""
+
+    try:
+        candidate = lookup.candidate_for_id(fighter_id)
+    except FighterLookupError:
+        return "Unknown Fighter"
+    return candidate.display_name or candidate.fighter_name or "Unknown Fighter"
+
+
+def _replace_internal_ids(message: str, lookup: FighterLookup) -> str:
+    """Ensure a browser never receives a raw stable fighter identifier."""
+
+    return _FIGHTER_ID_PATTERN.sub(lambda match: _fighter_name(lookup, match.group()), message)
+
+
+def _friendly_prediction_error(error: Exception, lookup: FighterLookup) -> HTTPException:
+    """Turn expected inference failures into user-safe HTTP responses."""
+
+    if isinstance(error, SnapshotUnavailableError):
+        fighter_name = _fighter_name(lookup, error.fighter_id)
+        if error.available_dates:
+            first = error.available_dates[0].isoformat()
+            last = error.available_dates[-1].isoformat()
+            detail = f" Available snapshot dates run from {first} through {last}."
+        else:
+            detail = " No usable snapshot is available for this fighter."
+        return HTTPException(
+            status_code=422,
+            detail=(
+                f"{fighter_name} has no snapshot available before the current server date "
+                f"({error.reference_date.isoformat()}).{detail}"
+            ),
+        )
+    if isinstance(error, AmbiguousFighterError):
+        candidates = ", ".join(
+            candidate.display_name or candidate.fighter_name or "Unknown Fighter"
+            for candidate in error.candidates
+        )
+        detail = "More than one fighter matches that name. Use a more specific full name."
+        if candidates:
+            detail = f"{detail} Matches: {candidates}."
+        return HTTPException(status_code=422, detail=detail)
+    if isinstance(error, SameFighterError):
+        return HTTPException(status_code=422, detail="Choose two different fighters.")
+
+    return HTTPException(status_code=422, detail=_replace_internal_ids(str(error), lookup))
+
+
+def _load_snapshot_availability(config: AppConfig) -> SnapshotAvailability:
+    """Validate the configured snapshot table and expose its usable date range."""
+
+    snapshots = load_fighter_snapshots(config.data)
+    summary = validate_snapshot_frame(
+        snapshots,
+        config.data,
+        expected_cutoff=config.data.dataset_cutoff,
+    )
+    return SnapshotAvailability(
+        snapshot_start_date=summary.as_of_date,
+        snapshot_end_date=summary.as_of_date,
+        lookup=FighterLookup(snapshots, aliases=config.inference.aliases),
+    )
 
 
 def _resolve_server_inputs(
@@ -79,6 +160,7 @@ def create_app(
         config_path=config_path,
         run_dir=run_dir,
     )
+    availability = _load_snapshot_availability(config)
     app = FastAPI(
         title="UFC Predictor API",
         version="0.1.0",
@@ -101,6 +183,8 @@ def create_app(
             status="ok",
             artifact_version=resolved_run_dir.name,
             dataset_cutoff=config.data.dataset_cutoff,
+            snapshot_start_date=availability.snapshot_start_date,
+            snapshot_end_date=availability.snapshot_end_date,
         )
 
     @app.post("/api/predict")
@@ -113,11 +197,10 @@ def create_app(
                 run_dir=resolved_run_dir,
                 fighter_a=request.fighter_a,
                 fighter_b=request.fighter_b,
-                prediction_date=request.prediction_date,
                 division=request.division,
             )
         except (UFCPredictorError, OSError, RuntimeError, ValueError) as error:
-            raise _friendly_prediction_error(error) from error
+            raise _friendly_prediction_error(error, availability.lookup) from error
 
     return app
 

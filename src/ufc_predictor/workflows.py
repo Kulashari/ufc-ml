@@ -11,7 +11,7 @@ import json
 import re
 from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Literal
@@ -955,7 +955,6 @@ def predict_fight(
     run_dir: str | Path,
     fighter_a: str,
     fighter_b: str,
-    prediction_date: date,
     fighter_a_id: str | None = None,
     fighter_b_id: str | None = None,
     division: str | None = None,
@@ -964,13 +963,11 @@ def predict_fight(
     is_catch_weight: bool | None = None,
     include_features: bool = False,
 ) -> dict[str, Any]:
-    """Load a trusted artifact and produce an order-symmetric matchup forecast."""
+    """Load a trusted artifact and produce an order-symmetric matchup forecast.
 
-    if (
-        prediction_date > config.data.dataset_cutoff
-        and not config.inference.allow_post_cutoff_prediction
-    ):
-        raise ValueError("Prediction date is after the dataset cutoff and configuration forbids it")
+    The predictor records one UTC timestamp for the request and uses its UTC calendar
+    date to refresh date-dependent features such as age and inactivity.
+    """
     artifacts = load_artifacts(run_dir)
     if artifacts.cutoff_date != config.data.dataset_cutoff:
         raise DataValidationError("Configured snapshot cutoff does not match the training artifact")
@@ -998,7 +995,6 @@ def predict_fight(
     prediction = predictor.predict(
         fighter_a,
         fighter_b,
-        prediction_date=prediction_date,
         fighter_a_id=fighter_a_id,
         fighter_b_id=fighter_b_id,
         context=MatchupContext(

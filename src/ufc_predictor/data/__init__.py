@@ -15,7 +15,6 @@ from ufc_predictor.data.loader import (
 from ufc_predictor.data.snapshots import (
     SnapshotStore,
     SnapshotValidationSummary,
-    validate_prediction_date,
     validate_snapshot_frame,
 )
 from ufc_predictor.data.splits import (
@@ -54,7 +53,6 @@ __all__ = [
     "validate_configured_splits",
     "validate_feature_dictionary",
     "validate_model_dataset",
-    "validate_prediction_date",
     "validate_snapshot_frame",
     "validate_split_column",
     "verify_file_sha256",

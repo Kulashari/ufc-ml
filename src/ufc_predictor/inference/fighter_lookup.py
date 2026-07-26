@@ -181,11 +181,11 @@ class SnapshotUnavailableError(FighterLookupError):
     def __init__(
         self,
         fighter_id: str,
-        prediction_date: date,
+        reference_date: date,
         available_dates: Sequence[date] = (),
     ) -> None:
         self.fighter_id = fighter_id
-        self.prediction_date = prediction_date
+        self.reference_date = reference_date
         self.available_dates = tuple(sorted(available_dates))
         if self.available_dates:
             first = self.available_dates[0].isoformat()
@@ -195,7 +195,7 @@ class SnapshotUnavailableError(FighterLookupError):
             detail = " No dated snapshots are available."
         super().__init__(
             "No snapshot exists strictly before "
-            f"{prediction_date.isoformat()} for fighter {fighter_id}.{detail}"
+            f"{reference_date.isoformat()} for fighter {fighter_id}.{detail}"
         )
 
 
@@ -374,18 +374,17 @@ class FighterLookup:
     def select_snapshot(
         self,
         fighter_id: str,
-        prediction_date: date | datetime | str,
+        reference_date: date,
     ) -> FighterSnapshot:
-        """Select the latest snapshot with ``as_of_date < prediction_date``.
+        """Select the latest snapshot with ``as_of_date < reference_date``.
 
-        Strict inequality is intentional: a snapshot stamped with the fight day
-        may already contain that day's outcome.
+        Strict inequality is intentional: a snapshot stamped with the prediction
+        day may already contain data that was not available at prediction time.
         """
 
         canonical_id = normalize_fighter_id(fighter_id)
         if canonical_id not in self._records_by_id:
             raise FighterNotFoundError(fighter_id)
-        target_date = coerce_date(prediction_date, field_name="prediction_date")
 
         dated_records: list[tuple[date, dict[str, Any]]] = []
         available_dates: list[date] = []
@@ -394,12 +393,12 @@ class FighterLookup:
             if parsed is None:
                 continue
             available_dates.append(parsed)
-            if parsed < target_date:
+            if parsed < reference_date:
                 dated_records.append((parsed, record))
 
         if not dated_records:
             raise SnapshotUnavailableError(
-                canonical_id, target_date, available_dates=available_dates
+                canonical_id, reference_date, available_dates=available_dates
             )
 
         latest_date = max(value[0] for value in dated_records)

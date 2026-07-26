@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 
+import { DIVISION_OPTIONS } from "../displayLabels";
 import type { PredictionRequest } from "../types";
 
 interface PredictionFormProps {
@@ -8,16 +9,9 @@ interface PredictionFormProps {
   onSubmit: (request: PredictionRequest) => Promise<void>;
 }
 
-function todayIsoDate(): string {
-  const now = new Date();
-  const timezoneOffset = now.getTimezoneOffset() * 60_000;
-  return new Date(now.getTime() - timezoneOffset).toISOString().slice(0, 10);
-}
-
 export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
   const [fighterA, setFighterA] = useState("");
   const [fighterB, setFighterB] = useState("");
-  const [predictionDate, setPredictionDate] = useState(todayIsoDate);
   const [division, setDivision] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -26,8 +20,8 @@ export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
     const first = fighterA.trim();
     const second = fighterB.trim();
 
-    if (!first || !second || !predictionDate) {
-      setFormError("Enter both fighter names and a prediction date.");
+    if (!first || !second) {
+      setFormError("Enter both fighter names.");
       return;
     }
 
@@ -40,7 +34,6 @@ export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
     await onSubmit({
       fighter_a: first,
       fighter_b: second,
-      prediction_date: predictionDate,
       ...(division.trim() ? { division: division.trim() } : {}),
     });
   }
@@ -86,34 +79,23 @@ export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
           />
         </label>
 
-        <div className="form-grid">
-          <label className="field-label" htmlFor="prediction-date">
-            Prediction date
-            <input
-              id="prediction-date"
-              name="predictionDate"
-              type="date"
-              value={predictionDate}
-              onChange={(event) => setPredictionDate(event.target.value)}
-              disabled={isLoading}
-              required
-            />
-          </label>
-
-          <label className="field-label" htmlFor="division">
-            Division <span className="optional">optional</span>
-            <input
-              id="division"
-              name="division"
-              type="text"
-              value={division}
-              onChange={(event) => setDivision(event.target.value)}
-              placeholder="e.g. Lightweight"
-              autoComplete="off"
-              disabled={isLoading}
-            />
-          </label>
-        </div>
+        <label className="field-label" htmlFor="division">
+          Division <span className="optional">optional</span>
+          <select
+            id="division"
+            name="division"
+            value={division}
+            onChange={(event) => setDivision(event.target.value)}
+            disabled={isLoading}
+          >
+            <option value="">Infer from fighter records</option>
+            {DIVISION_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
 
         {formError ? <p className="form-error" role="alert">{formError}</p> : null}
 
@@ -123,8 +105,8 @@ export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
       </form>
 
       <p className="form-note">
-        The model uses snapshots strictly before the selected fight date. It may flag limited
-        history or post-cutoff predictions.
+        The model uses the latest available fighter snapshot and may flag limited history or
+        stale data.
       </p>
     </section>
   );

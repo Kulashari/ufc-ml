@@ -1,7 +1,6 @@
 export interface PredictionRequest {
   fighter_a: string;
   fighter_b: string;
-  prediction_date: string;
   division?: string;
 }
 
@@ -9,10 +8,6 @@ export interface Fighter {
   fighter_id: string;
   fighter_name: string;
   display_name?: string | null;
-  division?: string | null;
-  dob?: string | null;
-  as_of_date?: string | null;
-  aliases?: string[];
 }
 
 export interface PredictionWarning {
@@ -29,17 +24,10 @@ export interface ConfidenceAssessment {
   warnings: PredictionWarning[];
 }
 
-export interface ArtifactSummary {
-  artifact_version?: string;
-  created_at_utc?: string;
-  cutoff_date?: string;
-  feature_count?: number;
-}
-
 export interface PredictionResponse {
   fighter_a: Fighter;
   fighter_b: Fighter;
-  prediction_date: string;
+  predicted_at: string;
   model_cutoff?: string | null;
   dataset_cutoff?: string | null;
   division?: string | null;
@@ -56,5 +44,4 @@ export interface PredictionResponse {
   confidence_tier?: string;
   confidence?: ConfidenceAssessment;
   warnings?: PredictionWarning[];
-  artifact?: ArtifactSummary;
 }

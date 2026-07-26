@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
-from datetime import date
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -322,12 +321,6 @@ def serve_command(
 def predict_command(
     fighter_a: str = typer.Option(..., "--fighter-a", help="First fighter name."),
     fighter_b: str = typer.Option(..., "--fighter-b", help="Second fighter name."),
-    prediction_date: str = typer.Option(
-        ...,
-        "--date",
-        metavar="YYYY-MM-DD",
-        help="Point-in-time prediction date.",
-    ),
     run_dir: Path = typer.Option(
         ...,
         "--run-dir",
@@ -383,19 +376,17 @@ def predict_command(
         help="Include both constructed feature rows in the JSON response.",
     ),
 ) -> None:
-    """Predict a matchup from two identities using strictly prior snapshots."""
+    """Predict a matchup using the current UTC server timestamp."""
 
     try:
         from ufc_predictor.workflows import predict_fight
 
-        parsed_date = date.fromisoformat(prediction_date)
         config = load_config(config_path)
         result = predict_fight(
             config,
             run_dir=run_dir,
             fighter_a=fighter_a,
             fighter_b=fighter_b,
-            prediction_date=parsed_date,
             fighter_a_id=fighter_a_id,
             fighter_b_id=fighter_b_id,
             division=division,

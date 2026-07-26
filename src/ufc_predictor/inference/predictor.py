@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from math import isfinite, log1p
 from types import MappingProxyType
 from typing import Any
@@ -121,7 +121,7 @@ class OrientationPrediction:
 class FightPrediction:
     fighter_a: FighterCandidate
     fighter_b: FighterCandidate
-    prediction_date: date
+    predicted_at: datetime
     model_cutoff: date | None
     division: str
     probability_a: float
@@ -147,7 +147,7 @@ class FightPrediction:
         result: dict[str, Any] = {
             "fighter_a": self.fighter_a.to_dict(),
             "fighter_b": self.fighter_b.to_dict(),
-            "prediction_date": self.prediction_date.isoformat(),
+            "predicted_at": self.predicted_at.isoformat(),
             "model_cutoff": (self.model_cutoff.isoformat() if self.model_cutoff else None),
             "dataset_cutoff": (self.model_cutoff.isoformat() if self.model_cutoff else None),
             "division": self.division,
@@ -253,16 +253,15 @@ def _as_nonnegative_int(value: Any, *, field_name: str) -> int:
 
 def refresh_dynamic_snapshot(
     snapshot: FighterSnapshot,
-    prediction_date: date | datetime | str,
+    reference_date: date,
     *,
     default_layoff_days: int = 365,
 ) -> dict[str, Any]:
     """Refresh date-dependent fields without altering historical aggregates."""
 
-    target_date = coerce_date(prediction_date, field_name="prediction_date")
-    if not snapshot.as_of_date < target_date:
+    if not snapshot.as_of_date < reference_date:
         raise FeatureConstructionError(
-            "snapshot date must be strictly earlier than prediction date"
+            "snapshot date must be strictly earlier than the prediction reference date"
         )
     if default_layoff_days < 0:
         raise ValueError("default_layoff_days cannot be negative")
@@ -270,11 +269,11 @@ def refresh_dynamic_snapshot(
     values = snapshot.to_dict()
     dob = _optional_date(values.get("dob"))
     if dob is not None:
-        if dob >= target_date:
+        if dob >= reference_date:
             raise FeatureConstructionError(
-                f"fighter {snapshot.fighter_id} has DOB on/after prediction date"
+                f"fighter {snapshot.fighter_id} has DOB on/after the prediction reference date"
             )
-        values["feature_age_years"] = (target_date - dob).days / _DAYS_PER_YEAR
+        values["feature_age_years"] = (reference_date - dob).days / _DAYS_PER_YEAR
         values["feature_age_missing"] = 0.0
     else:
         # Preserve the builder's fitted/imputed value.  Unknown age must remain
@@ -289,7 +288,7 @@ def refresh_dynamic_snapshot(
     if last_fight_date is None:
         layoff_days = default_layoff_days
     else:
-        layoff_days = (target_date - last_fight_date).days
+        layoff_days = (reference_date - last_fight_date).days
         if layoff_days < 0:
             raise FeatureConstructionError(
                 f"fighter {snapshot.fighter_id} has a future last_fight_date"
@@ -874,41 +873,38 @@ class FightPredictor:
         fighter_a: str,
         fighter_b: str,
         *,
-        prediction_date: date | datetime | str | None = None,
         fighter_a_id: str | None = None,
         fighter_b_id: str | None = None,
         context: MatchupContext | None = None,
     ) -> FightPrediction:
-        target_date = (
-            date.today()
-            if prediction_date is None
-            else coerce_date(prediction_date, field_name="prediction_date")
-        )
+        predicted_at = datetime.now(UTC)
+        reference_date = predicted_at.date()
         if (
             self.model_cutoff is not None
-            and target_date > self.model_cutoff
+            and reference_date > self.model_cutoff
             and not self.allow_post_cutoff_prediction
         ):
             raise UnsupportedMatchupError(
-                "prediction_date is after the model cutoff and post-cutoff prediction is disabled"
+                "The current server date is after the model cutoff and post-cutoff prediction "
+                "is disabled"
             )
         candidate_a = self.lookup.resolve(fighter_a, fighter_id=fighter_a_id)
         candidate_b = self.lookup.resolve(fighter_b, fighter_id=fighter_b_id)
         if candidate_a.fighter_id == candidate_b.fighter_id:
             raise SameFighterError("fighter_a and fighter_b resolve to the same ID")
 
-        snapshot_a = self.lookup.select_snapshot(candidate_a.fighter_id, target_date)
-        snapshot_b = self.lookup.select_snapshot(candidate_b.fighter_id, target_date)
+        snapshot_a = self.lookup.select_snapshot(candidate_a.fighter_id, reference_date)
+        snapshot_b = self.lookup.select_snapshot(candidate_b.fighter_id, reference_date)
         candidate_a = _candidate_at_snapshot(candidate_a, snapshot_a)
         candidate_b = _candidate_at_snapshot(candidate_b, snapshot_b)
         refreshed_a = refresh_dynamic_snapshot(
             snapshot_a,
-            target_date,
+            reference_date,
             default_layoff_days=self.default_layoff_days,
         )
         refreshed_b = refresh_dynamic_snapshot(
             snapshot_b,
-            target_date,
+            reference_date,
             default_layoff_days=self.default_layoff_days,
         )
 
@@ -998,14 +994,14 @@ class FightPredictor:
             field_name="feature_prior_fights",
         )
         days_after_cutoff = (
-            max(0, (target_date - self.model_cutoff).days) if self.model_cutoff else 0
+            max(0, (reference_date - self.model_cutoff).days) if self.model_cutoff else 0
         )
         confidence = assess_prediction_confidence(
             prior_fights_a=prior_a,
             prior_fights_b=prior_b,
             orientation_disagreement=disagreement,
-            snapshot_age_days_a=(target_date - snapshot_a.as_of_date).days,
-            snapshot_age_days_b=(target_date - snapshot_b.as_of_date).days,
+            snapshot_age_days_a=(reference_date - snapshot_a.as_of_date).days,
+            snapshot_age_days_b=(reference_date - snapshot_b.as_of_date).days,
             layoff_days_a=refreshed_a.get("_inference_layoff_days"),
             layoff_days_b=refreshed_b.get("_inference_layoff_days"),
             days_after_cutoff=days_after_cutoff,
@@ -1024,7 +1020,7 @@ class FightPredictor:
         return FightPrediction(
             fighter_a=candidate_a,
             fighter_b=candidate_b,
-            prediction_date=target_date,
+            predicted_at=predicted_at,
             model_cutoff=self.model_cutoff,
             division=division.code,
             probability_a=probability_a,

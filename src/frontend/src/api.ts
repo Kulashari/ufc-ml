@@ -1,3 +1,4 @@
+import { formatUserFacingError } from "./displayLabels";
 import type { PredictionRequest, PredictionResponse } from "./types";
 
 export class PredictionApiError extends Error {
@@ -44,7 +45,9 @@ export async function requestPrediction(
   const payload: unknown = await response.json().catch(() => undefined);
   if (!response.ok) {
     throw new PredictionApiError(
-      errorMessage(payload) ?? "The prediction service could not complete this request.",
+      formatUserFacingError(
+        errorMessage(payload) ?? "The prediction service could not complete this request.",
+      ),
       response.status,
     );
   }

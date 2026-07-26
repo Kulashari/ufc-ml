@@ -233,48 +233,14 @@ class SnapshotStore:
         self,
         fighter_a: str,
         fighter_b: str,
-        *,
-        prediction_date: date | str | pd.Timestamp | None = None,
-        allow_post_cutoff: bool = True,
     ) -> tuple[pd.Series, pd.Series]:
-        """Resolve two distinct fighters and enforce the prediction cutoff."""
-
-        if prediction_date is not None:
-            validate_prediction_date(
-                prediction_date,
-                snapshot_cutoff=self.as_of_date,
-                allow_post_cutoff=allow_post_cutoff,
-            )
+        """Resolve two distinct fighters from the configured snapshot table."""
         left = self.resolve(fighter_a)
         right = self.resolve(fighter_b)
         id_column = self._config.fighter_id_column
         if str(left[id_column]) == str(right[id_column]):
             raise SnapshotValidationError("A fighter cannot be matched against itself")
         return left, right
-
-
-def validate_prediction_date(
-    prediction_date: date | str | pd.Timestamp,
-    *,
-    snapshot_cutoff: date,
-    allow_post_cutoff: bool,
-) -> date:
-    """Ensure a snapshot is not used to make a historical/future-invalid call."""
-
-    parsed = pd.to_datetime(prediction_date, errors="coerce")
-    if pd.isna(parsed):
-        raise SnapshotValidationError(f"Invalid prediction date: {prediction_date!r}")
-    requested = pd.Timestamp(parsed).date()
-    if requested <= snapshot_cutoff:
-        raise SnapshotValidationError(
-            f"Snapshot dated {snapshot_cutoff} is not strictly before prediction "
-            f"date {requested}; using it would risk future information"
-        )
-    if not allow_post_cutoff:
-        raise SnapshotValidationError(
-            f"Prediction date {requested} is after snapshot cutoff {snapshot_cutoff}"
-        )
-    return requested
 
 
 def _strict_dates(
@@ -324,6 +290,5 @@ def _normalize_name(value: str) -> str:
 __all__ = [
     "SnapshotStore",
     "SnapshotValidationSummary",
-    "validate_prediction_date",
     "validate_snapshot_frame",
 ]

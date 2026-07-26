@@ -9,7 +9,6 @@ function App() {
   const [prediction, setPrediction] = useState<PredictionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-
   async function handlePrediction(request: PredictionRequest) {
     setIsLoading(true);
     setError(null);
@@ -36,7 +35,10 @@ function App() {
       </header>
 
       <section className="prediction-layout" aria-label="Fight prediction workspace">
-        <PredictionForm isLoading={isLoading} onSubmit={handlePrediction} />
+        <PredictionForm
+          isLoading={isLoading}
+          onSubmit={handlePrediction}
+        />
         <PredictionResult prediction={prediction} error={error} isLoading={isLoading} />
       </section>
 

@@ -1,3 +1,10 @@
+import {
+  fighterDisplayName,
+  formatDatasetLabel,
+  formatDate,
+  formatTimestamp,
+  predictedWinnerName,
+} from "../displayLabels";
 import type { PredictionResponse, PredictionWarning } from "../types";
 
 interface PredictionResultProps {
@@ -6,19 +13,11 @@ interface PredictionResultProps {
   isLoading: boolean;
 }
 
-function fighterName(fighter: PredictionResponse["fighter_a"]): string {
-  return fighter.display_name || fighter.fighter_name;
-}
-
 function formatPercentage(value: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "percent",
     maximumFractionDigits: 1,
   }).format(Math.max(0, Math.min(1, value)));
-}
-
-function displayDate(value?: string | null): string {
-  return value || "Not available";
 }
 
 function confidenceClass(tier?: string): string {
@@ -51,7 +50,7 @@ function PredictionWarnings({ warnings }: { warnings: PredictionWarning[] }) {
         <li className={`warning-item ${severityClass(warning.severity)}`} key={`${warning.code}-${index}`}>
           <span className="warning-icon" aria-hidden="true">!</span>
           <div>
-            <strong>{warning.code.replace(/_/g, " ")}</strong>
+            <strong>{formatDatasetLabel(warning.code, "warning")}</strong>
             <p>{warning.message}</p>
           </div>
         </li>
@@ -65,7 +64,7 @@ function EmptyState() {
     <section className="panel result-panel empty-state" aria-live="polite">
       <div className="empty-icon" aria-hidden="true">⌁</div>
       <h2>Your prediction will appear here</h2>
-      <p>Enter two fighters and a date to see their estimated win probabilities.</p>
+      <p>Enter two fighters to see their estimated win probabilities.</p>
     </section>
   );
 }
@@ -91,11 +90,16 @@ export function PredictionResult({ prediction, error, isLoading }: PredictionRes
     ) : <EmptyState />;
   }
 
-  const nameA = fighterName(prediction.fighter_a);
-  const nameB = fighterName(prediction.fighter_b);
+  const nameA = fighterDisplayName(prediction.fighter_a);
+  const nameB = fighterDisplayName(prediction.fighter_b);
   const warnings = prediction.warnings ?? prediction.confidence?.warnings ?? [];
   const confidenceTier = prediction.confidence_tier ?? prediction.confidence?.tier ?? "reduced";
   const confidenceScore = prediction.confidence?.score;
+  const winnerName = predictedWinnerName(
+    prediction.predicted_winner_name,
+    prediction.predicted_winner_id,
+    [prediction.fighter_a, prediction.fighter_b],
+  );
 
   return (
     <section className="panel result-panel" aria-live="polite" aria-labelledby="prediction-title">
@@ -105,16 +109,16 @@ export function PredictionResult({ prediction, error, isLoading }: PredictionRes
         <div>
           <p className="section-kicker">Model result</p>
           <h2 id="prediction-title">{nameA} <span>vs</span> {nameB}</h2>
-          <p className="muted">Prediction date: {displayDate(prediction.prediction_date)}</p>
+          <p className="muted">Prediction generated: {formatTimestamp(prediction.predicted_at)}</p>
         </div>
         <span className={`confidence-badge ${confidenceClass(confidenceTier)}`}>
-          {confidenceTier} confidence
+          {formatDatasetLabel(confidenceTier, "confidence")} confidence
         </span>
       </div>
 
       <div className="winner-callout">
         <p>Projected winner</p>
-        <strong>{prediction.is_even_probability ? "Even matchup" : prediction.predicted_winner_name || "No edge"}</strong>
+        <strong>{prediction.is_even_probability ? "Even matchup" : winnerName}</strong>
         <span>
           {prediction.is_even_probability
             ? "The model sees an even probability."
@@ -143,8 +147,8 @@ export function PredictionResult({ prediction, error, isLoading }: PredictionRes
         <div className="detail-group">
           <p className="detail-label">Fight context</p>
           <dl>
-            <div><dt>Division</dt><dd>{prediction.division || "Inferred"}</dd></div>
-            <div><dt>Model cutoff</dt><dd>{displayDate(prediction.model_cutoff ?? prediction.dataset_cutoff)}</dd></div>
+            <div><dt>Division</dt><dd>{formatDatasetLabel(prediction.division, "division", "Inferred")}</dd></div>
+            <div><dt>Model cutoff</dt><dd>{formatDate(prediction.model_cutoff ?? prediction.dataset_cutoff)}</dd></div>
             <div><dt>Orientation gap</dt><dd>{formatPercentage(prediction.orientation_disagreement ?? prediction.confidence?.orientation_disagreement ?? 0)}</dd></div>
           </dl>
         </div>
@@ -153,7 +157,7 @@ export function PredictionResult({ prediction, error, isLoading }: PredictionRes
           <dl>
             <div><dt>{nameA} UFC fights</dt><dd>{prediction.prior_ufc_fights_a}</dd></div>
             <div><dt>{nameB} UFC fights</dt><dd>{prediction.prior_ufc_fights_b}</dd></div>
-            <div><dt>Snapshot dates</dt><dd>{displayDate(prediction.snapshot_date_a)} / {displayDate(prediction.snapshot_date_b)}</dd></div>
+            <div><dt>Snapshot dates</dt><dd>{formatDate(prediction.snapshot_date_a)} / {formatDate(prediction.snapshot_date_b)}</dd></div>
           </dl>
         </div>
       </div>
@@ -169,9 +173,6 @@ export function PredictionResult({ prediction, error, isLoading }: PredictionRes
         <PredictionWarnings warnings={warnings} />
       </div>
 
-      {prediction.artifact?.artifact_version ? (
-        <p className="artifact-note">Model run: {prediction.artifact.artifact_version}</p>
-      ) : null}
     </section>
   );
 }

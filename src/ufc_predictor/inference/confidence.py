@@ -206,9 +206,7 @@ def assess_prediction_confidence(
             PredictionWarning(
                 code=WarningCode.AFTER_CUTOFF,
                 severity=severity,
-                message=(
-                    "The requested prediction date is after the model's training data cutoff."
-                ),
+                message=("The current prediction time is after the model's training data cutoff."),
                 details={
                     "days_after_cutoff": days_after_cutoff,
                     "rolling_activity_note": (
