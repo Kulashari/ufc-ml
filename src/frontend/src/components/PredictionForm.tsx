@@ -57,6 +57,9 @@ export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
             onChange={(event) => setFighterA(event.target.value)}
             placeholder="e.g. Ilia Topuria"
             autoComplete="off"
+            autoCapitalize="words"
+            enterKeyHint="next"
+            spellCheck={false}
             disabled={isLoading}
             required
           />
@@ -74,6 +77,9 @@ export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
             onChange={(event) => setFighterB(event.target.value)}
             placeholder="e.g. Max Holloway"
             autoComplete="off"
+            autoCapitalize="words"
+            enterKeyHint="done"
+            spellCheck={false}
             disabled={isLoading}
             required
           />

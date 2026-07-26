@@ -5,6 +5,8 @@
   background: #090c12;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 * {
@@ -12,9 +14,9 @@
 }
 
 body {
-  min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  overflow-x: clip;
   background:
     radial-gradient(circle at 14% 4%, rgba(197, 43, 63, 0.2), transparent 30rem),
     radial-gradient(circle at 90% 16%, rgba(39, 120, 225, 0.16), transparent 28rem),
@@ -25,6 +27,8 @@ button,
 input,
 select {
   font: inherit;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button {
@@ -39,6 +43,7 @@ select:disabled {
 
 .app-shell {
   width: min(1160px, calc(100% - 40px));
+  max-width: 100%;
   margin: 0 auto;
   padding: 58px 0 32px;
 }
@@ -138,6 +143,7 @@ select:disabled {
 .field-label select {
   width: 100%;
   min-width: 0;
+  min-height: 48px;
   border: 1px solid #313b4c;
   border-radius: 10px;
   outline: none;
@@ -198,9 +204,11 @@ select:disabled {
   transition: filter 150ms ease, transform 150ms ease;
 }
 
-.predict-button:hover:not(:disabled) {
-  filter: brightness(1.08);
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .predict-button:hover:not(:disabled) {
+    filter: brightness(1.08);
+    transform: translateY(-1px);
+  }
 }
 
 .predict-button:focus-visible {
@@ -245,6 +253,13 @@ select:disabled {
   gap: 18px;
 }
 
+.result-header > div,
+.warning-heading > div,
+.warning-item > div,
+.detail-group {
+  min-width: 0;
+}
+
 .result-header h2 {
   font-size: clamp(1.35rem, 2.6vw, 1.85rem);
 }
@@ -258,6 +273,7 @@ select:disabled {
 
 .confidence-badge {
   flex: 0 0 auto;
+  max-width: 100%;
   border: 1px solid currentColor;
   border-radius: 999px;
   padding: 6px 9px;
@@ -294,6 +310,7 @@ select:disabled {
   color: #fff;
   font-size: 1.52rem;
   letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
 }
 
 .winner-callout span {
@@ -308,6 +325,7 @@ select:disabled {
 }
 
 .probability-card {
+  min-width: 0;
   border: 1px solid #2c3747;
   border-radius: 13px;
   background: rgba(10, 14, 21, 0.36);
@@ -395,6 +413,17 @@ select:disabled {
   color: #eff2f7;
   font-weight: 700;
   text-align: right;
+}
+
+.result-header h2,
+.detail-group dt,
+.detail-group dd,
+.warning-item strong,
+.warning-item p,
+.form-error,
+.inline-error,
+.error-state > p:last-child {
+  overflow-wrap: anywhere;
 }
 
 .warning-section {
@@ -571,10 +600,11 @@ select:disabled {
   }
 }
 
-@media (max-width: 500px) {
+@media (max-width: 620px) {
   .app-shell {
-    width: min(100% - 22px, 680px);
+    width: calc(100% - 24px);
     padding-top: 28px;
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
   }
 
   .hero h1 {
@@ -600,6 +630,11 @@ select:disabled {
     justify-self: start;
   }
 
+  .predict-button {
+    min-height: 50px;
+    width: 100%;
+  }
+
   .detail-group dl div {
     grid-template-columns: 1fr;
     gap: 2px;
@@ -607,5 +642,63 @@ select:disabled {
 
   .detail-group dd {
     text-align: left;
+  }
+
+  .warning-heading {
+    display: grid;
+    align-items: start;
+  }
+
+  .warning-heading > span {
+    justify-self: start;
+  }
+
+  .empty-state,
+  .loading-state,
+  .error-state {
+    min-height: 360px;
+    padding: 30px 22px;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-shell {
+    width: calc(100% - 20px);
+  }
+
+  .form-panel,
+  .result-panel {
+    border-radius: 15px;
+    padding: 16px;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .winner-callout {
+    padding: 16px;
+  }
+
+  .probability-card {
+    padding: 13px;
+  }
+}
+
+@media (pointer: coarse) {
+  .field-label input,
+  .field-label select {
+    font-size: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
