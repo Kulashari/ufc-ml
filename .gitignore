@@ -229,6 +229,11 @@ reports/*
 *.pickle
 *.onnx
 
+# React/Vite local build outputs
+src/frontend/node_modules/
+src/frontend/dist/
+src/frontend/.vite/
+
 # Local configuration and credentials
 .env.*
 !.env.example

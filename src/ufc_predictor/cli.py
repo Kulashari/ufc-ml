@@ -263,6 +263,61 @@ def evaluate_final_command(
         _abort(exc)
 
 
+@app.command("serve")
+def serve_command(
+    run_dir: Path = typer.Option(
+        ...,
+        "--run-dir",
+        exists=True,
+        file_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="Trusted versioned artifact directory exposed by the local UI API.",
+    ),
+    config_path: Path = typer.Option(
+        Path("configs/default.yaml"),
+        "--config",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="YAML project configuration.",
+    ),
+    host: str = typer.Option(
+        "127.0.0.1",
+        "--host",
+        help="Interface to bind; use the loopback default for local use.",
+    ),
+    port: int = typer.Option(
+        8000,
+        "--port",
+        min=1,
+        max=65535,
+        help="Local HTTP port for the React UI API.",
+    ),
+) -> None:
+    """Serve the selected trusted artifact to the local React prediction UI."""
+
+    try:
+        from ufc_predictor.api import run_server
+
+        run_server(
+            config_path=config_path,
+            run_dir=run_dir,
+            host=host,
+            port=port,
+        )
+    except ImportError:
+        _abort(
+            RuntimeError(
+                "Web UI support requires optional dependencies. "
+                'Install them with: python -m pip install -e ".[web]"'
+            )
+        )
+    except (UFCPredictorError, OSError, RuntimeError, ValueError) as exc:
+        _abort(exc)
+
+
 @app.command("predict")
 def predict_command(
     fighter_a: str = typer.Option(..., "--fighter-a", help="First fighter name."),

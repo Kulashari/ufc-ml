@@ -26,6 +26,13 @@ Install the optional bounded Optuna tuner only if you intend to use
 python -m pip install -e ".[optuna]"
 ```
 
+Install the optional local web API only if you want to use the React matchup
+interface:
+
+```powershell
+python -m pip install -e ".[web]"
+```
+
 On macOS/Linux, activate the environment with `source .venv/bin/activate`.
 
 ## Data configuration
@@ -162,6 +169,49 @@ This is a research probability model, not a guarantee or betting recommendation.
 A value such as `0.64` means the model estimates a 64% win probability under the available
 data and matchup assumptions.
 
+## Local prediction UI
+
+The repository includes a small dark-mode React + TypeScript interface in
+[src/frontend/](src/frontend). It is a local companion to the Python model: the browser submits
+matchup inputs to a local API, and the API runs the same `predict_fight` workflow used by
+the CLI. It never trains a model and the browser cannot choose arbitrary artifact paths.
+
+The frontend requires a Vite-compatible Node.js release (currently Node 20.19+ or
+22.12+). First install the optional Python web dependencies from the project root, then
+start the API with the trained artifact you want to expose:
+
+```powershell
+python -m pip install -e ".[web]"
+python -m ufc_predictor serve `
+  --config configs/default.yaml `
+  --run-dir artifacts/20260723T181548Z-xgboost
+```
+
+In a second terminal, start the React development server:
+
+```powershell
+cd src/frontend
+npm install
+npm run dev
+```
+
+Open the local URL shown by Vite (normally `http://127.0.0.1:5173`). The development
+server proxies `/api` requests to `http://127.0.0.1:8000`, so no frontend environment
+variables are needed for local use. The form accepts two fighter names, a prediction date,
+and an optional division. It displays the predicted winner, both win probabilities,
+confidence tier, known warnings, UFC-history counts, and data cutoff.
+
+To make a production frontend bundle after installing its dependencies, run:
+
+```powershell
+cd src/frontend
+npm run build
+```
+
+The generated `src/frontend/dist` directory is intentionally ignored by Git. If the API
+reports an error, use the same spelling, date, and optional division rules described in the
+CLI prediction section above.
+
 ## GPU and CPU behavior
 
 XGBoost uses `tree_method="hist"`. With `device: auto`, an explicit tiny CUDA probe runs
@@ -184,15 +234,20 @@ distributed or multi-GPU infrastructure is used.
 ## Project layout
 
 ```text
-src/ufc_predictor/
-  data/          loading, fingerprints, validation, splits, snapshots
-  features/      ordered registry and semantic/ablation groups
-  models/        logistic, XGBoost, tuning, calibration, selection
-  evaluation/    metrics, subgroup segmentation, reports
-  inference/     identity lookup, feature reconstruction, confidence
-  artifacts/     atomic versioned save/load and integrity manifests
-  cli.py         explicit command registration
-  workflows.py   train/validation, final-test, and prediction orchestration
+src/
+  ufc_predictor/  installable Python package
+    data/         loading, fingerprints, validation, splits, snapshots
+    features/     ordered registry and semantic/ablation groups
+    models/       logistic, XGBoost, tuning, calibration, selection
+    evaluation/   metrics, subgroup segmentation, reports
+    inference/    identity lookup, feature reconstruction, confidence
+    artifacts/    atomic versioned save/load and integrity manifests
+    api.py        local HTTP adapter for the React prediction UI
+    cli.py        explicit command registration
+    workflows.py  train/validation, final-test, and prediction orchestration
+  frontend/       standalone React + TypeScript Vite application
+    src/
+      components/ reusable prediction form and result UI
 configs/         checked YAML configuration
 scripts/         lightweight environment checks
 reports/         generated reports (ignored except `.gitkeep`)
@@ -218,6 +273,6 @@ Run lightweight quality checks:
 python -m ruff format .
 python -m ruff check .
 python -m mypy src
-python -m compileall src
+python -m compileall src/ufc_predictor
 python scripts/check_environment.py --config configs/default.yaml
 ```
