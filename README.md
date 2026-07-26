@@ -124,7 +124,6 @@ After manually training a run:
 ufc-predictor predict `
   --fighter-a "Fighter A" `
   --fighter-b "Fighter B" `
-  --date 2026-08-01 `
   --run-dir artifacts/<run_id>
 ```
 
@@ -133,20 +132,21 @@ names return candidates; repeat the command with `--fighter-a-id` or `--fighter-
 to select the stable fighter ID. `--include-features` exposes both constructed rows for
 auditing.
 
-Inference normalizes aliases, requires the latest snapshot to be strictly earlier than
-the prediction date, refreshes age and inactivity, reconstructs all 71 features in the
-saved order, predicts both A-vs-B and B-vs-A, reverses the second probability, and averages
-the two. Swapping fighter order therefore swaps the final probabilities.
+Each prediction records a UTC `predicted_at` timestamp. Inference normalizes aliases,
+selects only snapshots strictly earlier than that timestamp's UTC calendar date, refreshes
+age and inactivity from the same date, reconstructs all 71 features in the saved order,
+predicts both A-vs-B and B-vs-A, reverses the second probability, and averages the two.
+Swapping fighter order therefore swaps the final probabilities.
 
-The response includes resolved identities, both probabilities, winner, prior UFC fight
-counts, snapshot dates, cutoff, model metadata, orientation disagreement, applicability
-confidence, and warnings.
+The response includes `predicted_at`, resolved identities, both probabilities, winner,
+prior UFC fight counts, snapshot dates, cutoff, model metadata, orientation disagreement,
+applicability confidence, and warnings.
 
 ## Confidence and limitations
 
 Confidence describes model applicability, not how certain a displayed probability looks.
-It is reduced for debutants, limited UFC history, stale snapshots or inactivity, dates
-after the cutoff, orientation disagreement, out-of-range features, and unsupported
+It is reduced for debutants, limited UFC history, stale snapshots or inactivity, predictions
+made after the cutoff, orientation disagreement, out-of-range features, and unsupported
 contexts.
 
 Known debutants are supported only when their static profile and the same zero-history
@@ -155,9 +155,9 @@ are marked low confidence. Unknown fighters or rows missing a required reconstru
 feature are rejected.
 
 The currently configured snapshot file contains one 2026-03-07 snapshot per fighter.
-Consequently it supports prediction dates after that cutoff, not historical backtesting
-before it. The lookup implementation can consume multiple dated snapshots if a future
-point-in-time snapshot table is supplied.
+Predictions use it only after the server's UTC date has passed that cutoff. The lookup
+implementation can consume multiple dated snapshots if a future point-in-time snapshot
+table is supplied.
 
 Rolling 365/730-day activity counts cannot be fully recomputed from one aggregate snapshot;
 the predictor resets them when the recalculated layoff proves a window is empty and otherwise
@@ -197,9 +197,13 @@ npm run dev
 
 Open the local URL shown by Vite (normally `http://127.0.0.1:5173`). The development
 server proxies `/api` requests to `http://127.0.0.1:8000`, so no frontend environment
-variables are needed for local use. The form accepts two fighter names, a prediction date,
-and an optional division. It displays the predicted winner, both win probabilities,
-confidence tier, known warnings, UFC-history counts, and data cutoff.
+variables are needed for local use. The form accepts two fighter names and an optional
+division. It displays the server-generated UTC prediction timestamp, predicted winner, both
+win probabilities, confidence tier, known warnings, UFC-history counts, and data cutoff.
+
+The prediction service records its current UTC timestamp once per request and uses that
+same UTC calendar date for both fighters' age and inactivity features. It never accepts a
+browser-provided date, so a client cannot select data from the future.
 
 To make a production frontend bundle after installing its dependencies, run:
 
@@ -209,8 +213,8 @@ npm run build
 ```
 
 The generated `src/frontend/dist` directory is intentionally ignored by Git. If the API
-reports an error, use the same spelling, date, and optional division rules described in the
-CLI prediction section above.
+reports an error, use the same spelling and optional division rules described in the CLI
+prediction section above.
 
 ## GPU and CPU behavior
 
@@ -229,7 +233,7 @@ distributed or multi-GPU infrastructure is used.
 - Hyperparameters, model family, calibration, and optional ablations use validation only.
 - The test split is reachable only through `evaluate-final`.
 - Artifact loading verifies SHA256 integrity, schema order, cutoff, and source fingerprints.
-- Inference requires `snapshot_date < prediction_date`.
+- Inference requires `snapshot_date <` the server-generated UTC reference date.
 
 ## Project layout
 
@@ -260,8 +264,8 @@ artifacts/       generated model runs (ignored except `.gitkeep`)
   update `configs/default.yaml`.
 - `No fighter matches`: confirm spelling or inspect the suggested candidates.
 - `matches multiple IDs`: pass the displayed stable fighter ID.
-- `snapshot ... strictly before`: choose a date after the available snapshot or supply
-  an older point-in-time snapshot table.
+- `snapshot ... strictly before`: update the snapshot table so it contains data before the
+  server's current UTC date.
 - CUDA fallback: review the recorded probe reason; CPU training is fully supported.
 - `Optuna is optional`: install `.[optuna]` or omit `--tune-xgboost`.
 - Command not found after a user-level install: activate the virtual environment or run
