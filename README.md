@@ -58,10 +58,14 @@ The checked contract is:
 
 Datasets and generated artifacts are intentionally ignored by Git.
 
+The examples below use `python -m ufc_ml_api`, which works even when the user-level
+Scripts directory is not on `PATH`. After activating the virtual environment,
+`ufc-predictor` is the equivalent installed convenience command.
+
 Validate all configured assets without fitting a model:
 
 ```powershell
-ufc-predictor data validate --config configs/default.yaml
+python -m ufc_ml_api data validate --config configs/default.yaml
 ```
 
 ## Manual training
@@ -70,19 +74,19 @@ Train the standardized logistic model and select L2/elastic-net settings by vali
 log loss:
 
 ```powershell
-ufc-predictor train --config configs/default.yaml --model logistic
+python -m ufc_ml_api train --config configs/default.yaml --model logistic
 ```
 
 Train the configured XGBoost model with validation early stopping:
 
 ```powershell
-ufc-predictor train --config configs/default.yaml --model xgboost
+python -m ufc_ml_api train --config configs/default.yaml --model xgboost
 ```
 
 Fit both families and apply the conservative model-selection guardrails:
 
 ```powershell
-ufc-predictor train --config configs/default.yaml --model all
+python -m ufc_ml_api train --config configs/default.yaml --model all
 ```
 
 The `all` workflow selects XGBoost only when it meaningfully improves validation log
@@ -102,7 +106,7 @@ diagnostic and is not presented as an unbiased held-out calibrated score.
 Run this once, after all modeling decisions are final:
 
 ```powershell
-ufc-predictor evaluate-final `
+python -m ufc_ml_api evaluate-final `
   --config configs/default.yaml `
   --run-dir artifacts/<run_id>
 ```
@@ -121,10 +125,9 @@ groups, three-plus-fight groups, experience bands, title bouts, and probability 
 After manually training a run:
 
 ```powershell
-ufc-predictor predict `
+python -m ufc_ml_api predict `
   --fighter-a "Fighter A" `
   --fighter-b "Fighter B" `
-  --date 2026-08-01 `
   --run-dir artifacts/<run_id>
 ```
 
@@ -133,20 +136,21 @@ names return candidates; repeat the command with `--fighter-a-id` or `--fighter-
 to select the stable fighter ID. `--include-features` exposes both constructed rows for
 auditing.
 
-Inference normalizes aliases, requires the latest snapshot to be strictly earlier than
-the prediction date, refreshes age and inactivity, reconstructs all 71 features in the
-saved order, predicts both A-vs-B and B-vs-A, reverses the second probability, and averages
-the two. Swapping fighter order therefore swaps the final probabilities.
+Each prediction records a UTC `predicted_at` timestamp. Inference normalizes aliases,
+selects only snapshots strictly earlier than that timestamp's UTC calendar date, refreshes
+age and inactivity from the same date, reconstructs all 71 features in the saved order,
+predicts both A-vs-B and B-vs-A, reverses the second probability, and averages the two.
+Swapping fighter order therefore swaps the final probabilities.
 
-The response includes resolved identities, both probabilities, winner, prior UFC fight
-counts, snapshot dates, cutoff, model metadata, orientation disagreement, applicability
-confidence, and warnings.
+The response includes `predicted_at`, resolved identities, both probabilities, winner,
+prior UFC fight counts, snapshot dates, cutoff, model metadata, orientation disagreement,
+applicability confidence, and warnings.
 
 ## Confidence and limitations
 
 Confidence describes model applicability, not how certain a displayed probability looks.
-It is reduced for debutants, limited UFC history, stale snapshots or inactivity, dates
-after the cutoff, orientation disagreement, out-of-range features, and unsupported
+It is reduced for debutants, limited UFC history, stale snapshots or inactivity, predictions
+made after the cutoff, orientation disagreement, out-of-range features, and unsupported
 contexts.
 
 Known debutants are supported only when their static profile and the same zero-history
@@ -155,9 +159,9 @@ are marked low confidence. Unknown fighters or rows missing a required reconstru
 feature are rejected.
 
 The currently configured snapshot file contains one 2026-03-07 snapshot per fighter.
-Consequently it supports prediction dates after that cutoff, not historical backtesting
-before it. The lookup implementation can consume multiple dated snapshots if a future
-point-in-time snapshot table is supplied.
+Predictions use it only after the server's UTC date has passed that cutoff. The lookup
+implementation can consume multiple dated snapshots if a future point-in-time snapshot
+table is supplied.
 
 Rolling 365/730-day activity counts cannot be fully recomputed from one aggregate snapshot;
 the predictor resets them when the recalculated layoff proves a window is empty and otherwise
@@ -172,7 +176,7 @@ data and matchup assumptions.
 ## Local prediction UI
 
 The repository includes a small dark-mode React + TypeScript interface in
-[src/frontend/](src/frontend). It is a local companion to the Python model: the browser submits
+[src/ufc-ml.web/](src/ufc-ml.web). It is a local companion to the Python model: the browser submits
 matchup inputs to a local API, and the API runs the same `predict_fight` workflow used by
 the CLI. It never trains a model and the browser cannot choose arbitrary artifact paths.
 
@@ -182,7 +186,7 @@ start the API with the trained artifact you want to expose:
 
 ```powershell
 python -m pip install -e ".[web]"
-python -m ufc_predictor serve `
+python -m ufc_ml_api serve `
   --config configs/default.yaml `
   --run-dir artifacts/20260723T181548Z-xgboost
 ```
@@ -190,27 +194,31 @@ python -m ufc_predictor serve `
 In a second terminal, start the React development server:
 
 ```powershell
-cd src/frontend
+cd src/ufc-ml.web
 npm install
 npm run dev
 ```
 
 Open the local URL shown by Vite (normally `http://127.0.0.1:5173`). The development
 server proxies `/api` requests to `http://127.0.0.1:8000`, so no frontend environment
-variables are needed for local use. The form accepts two fighter names, a prediction date,
-and an optional division. It displays the predicted winner, both win probabilities,
-confidence tier, known warnings, UFC-history counts, and data cutoff.
+variables are needed for local use. The form accepts two fighter names and an optional
+division. It displays the server-generated UTC prediction timestamp, predicted winner, both
+win probabilities, confidence tier, known warnings, UFC-history counts, and data cutoff.
+
+The prediction service records its current UTC timestamp once per request and uses that
+same UTC calendar date for both fighters' age and inactivity features. It never accepts a
+browser-provided date, so a client cannot select data from the future.
 
 To make a production frontend bundle after installing its dependencies, run:
 
 ```powershell
-cd src/frontend
+cd src/ufc-ml.web
 npm run build
 ```
 
-The generated `src/frontend/dist` directory is intentionally ignored by Git. If the API
-reports an error, use the same spelling, date, and optional division rules described in the
-CLI prediction section above.
+The generated `src/ufc-ml.web/dist` directory is intentionally ignored by Git. If the API
+reports an error, use the same spelling and optional division rules described in the CLI
+prediction section above.
 
 ## GPU and CPU behavior
 
@@ -229,23 +237,26 @@ distributed or multi-GPU infrastructure is used.
 - Hyperparameters, model family, calibration, and optional ablations use validation only.
 - The test split is reachable only through `evaluate-final`.
 - Artifact loading verifies SHA256 integrity, schema order, cutoff, and source fingerprints.
-- Inference requires `snapshot_date < prediction_date`.
+- Inference requires `snapshot_date <` the server-generated UTC reference date.
 
 ## Project layout
 
 ```text
 src/
-  ufc_predictor/  installable Python package
-    data/         loading, fingerprints, validation, splits, snapshots
-    features/     ordered registry and semantic/ablation groups
-    models/       logistic, XGBoost, tuning, calibration, selection
-    evaluation/   metrics, subgroup segmentation, reports
-    inference/    identity lookup, feature reconstruction, confidence
-    artifacts/    atomic versioned save/load and integrity manifests
-    api.py        local HTTP adapter for the React prediction UI
-    cli.py        explicit command registration
-    workflows.py  train/validation, final-test, and prediction orchestration
-  frontend/       standalone React + TypeScript Vite application
+  ufc-ml.core/    model and data domain service (Python import: ufc_ml_core)
+    ufc_ml_core/
+      data/       loading, fingerprints, validation, splits, snapshots
+      features/   ordered registry and semantic/ablation groups
+      models/     logistic, XGBoost, tuning, calibration, selection
+      evaluation/ metrics, subgroup segmentation, reports
+      inference/  identity lookup, feature reconstruction, confidence
+      artifacts/  atomic versioned save/load and integrity manifests
+      workflows.py training/validation, final-test, and prediction orchestration
+  ufc-ml.api/     HTTP and command-line service (Python import: ufc_ml_api)
+    ufc_ml_api/
+      api.py      local FastAPI adapter for the React prediction UI
+      cli.py      explicit command registration
+  ufc-ml.web/     standalone React + TypeScript Vite application
     src/
       components/ reusable prediction form and result UI
 configs/         checked YAML configuration
@@ -254,18 +265,25 @@ reports/         generated reports (ignored except `.gitkeep`)
 artifacts/       generated model runs (ignored except `.gitkeep`)
 ```
 
+The hyphenated directories are service boundaries used by the repository and deployment
+layout. Python imports use underscores (`ufc_ml_core` and `ufc_ml_api`) because hyphens
+and dots are not valid Python module names.
+
+Trusted artifacts saved before this reorganization remain loadable through an in-memory
+compatibility alias; no legacy source directory is retained.
+
 ## Troubleshooting
 
 - `Data file does not exist`: place the four processed CSVs at the configured paths or
   update `configs/default.yaml`.
 - `No fighter matches`: confirm spelling or inspect the suggested candidates.
 - `matches multiple IDs`: pass the displayed stable fighter ID.
-- `snapshot ... strictly before`: choose a date after the available snapshot or supply
-  an older point-in-time snapshot table.
+- `snapshot ... strictly before`: update the snapshot table so it contains data before the
+  server's current UTC date.
 - CUDA fallback: review the recorded probe reason; CPU training is fully supported.
 - `Optuna is optional`: install `.[optuna]` or omit `--tune-xgboost`.
 - Command not found after a user-level install: activate the virtual environment or run
-  `python -m ufc_predictor ...`.
+  `python -m ufc_ml_api ...`.
 
 Run lightweight quality checks:
 
@@ -273,6 +291,5 @@ Run lightweight quality checks:
 python -m ruff format .
 python -m ruff check .
 python -m mypy src
-python -m compileall src/ufc_predictor
-python scripts/check_environment.py --config configs/default.yaml
+python -m compileall src/ufc-ml.core/ufc_ml_core src/ufc-ml.api/ufc_ml_api
 ```
