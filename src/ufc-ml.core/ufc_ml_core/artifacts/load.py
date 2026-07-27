@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -97,6 +98,22 @@ _REQUIRED_COMPONENTS = frozenset(
         "git_hash",
     }
 )
+
+_CURRENT_PACKAGE_NAME = "ufc_ml_core"
+_LEGACY_PACKAGE_NAME = "ufc_predictor"
+
+
+def _enable_legacy_artifact_imports() -> None:
+    """Allow trusted artifacts saved before the core package rename to load.
+
+    Pickle stores an object's fully qualified module path.  Existing model runs
+    were saved under ``ufc_predictor``; expose that name only in memory while
+    loading so the source tree can remain on the ``ufc_ml_core`` layout.
+    """
+
+    sys.modules.setdefault(_LEGACY_PACKAGE_NAME, sys.modules[_CURRENT_PACKAGE_NAME])
+
+
 _VERSION_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 
 
@@ -327,6 +344,7 @@ def load_artifacts(
             "feature registry fingerprint disagrees between schema and data provenance"
         )
 
+    _enable_legacy_artifact_imports()
     pipeline_path = paths["pipeline"]
     assert pipeline_path is not None
     pipeline = joblib.load(pipeline_path)

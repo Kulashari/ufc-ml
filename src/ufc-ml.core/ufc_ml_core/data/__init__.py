@@ -1,6 +1,6 @@
 """Processed dataset loading, validation, splitting, and snapshots."""
 
-from ufc_predictor.data.loader import (
+from ufc_ml_core.data.loader import (
     DatasetBundle,
     LoadedFrame,
     dataframe_sha256,
@@ -12,12 +12,12 @@ from ufc_predictor.data.loader import (
     load_model_dataset,
     verify_file_sha256,
 )
-from ufc_predictor.data.snapshots import (
+from ufc_ml_core.data.snapshots import (
     SnapshotStore,
     SnapshotValidationSummary,
     validate_snapshot_frame,
 )
-from ufc_predictor.data.splits import (
+from ufc_ml_core.data.splits import (
     SplitFrames,
     SplitSummary,
     assign_configured_splits,
@@ -26,7 +26,7 @@ from ufc_predictor.data.splits import (
     validate_configured_splits,
     validate_split_column,
 )
-from ufc_predictor.data.validation import (
+from ufc_ml_core.data.validation import (
     DatasetValidationSummary,
     validate_feature_dictionary,
     validate_model_dataset,

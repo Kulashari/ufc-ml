@@ -8,8 +8,8 @@ from datetime import date
 import numpy as np
 import pandas as pd
 
-from ufc_predictor.config import DataConfig, SplitLabels
-from ufc_predictor.exceptions import SplitValidationError
+from ufc_ml_core.config import DataConfig, SplitLabels
+from ufc_ml_core.exceptions import SplitValidationError
 
 
 @dataclass(frozen=True, slots=True)

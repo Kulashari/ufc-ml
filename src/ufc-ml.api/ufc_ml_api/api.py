@@ -17,17 +17,17 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ufc_predictor.config import AppConfig, load_config
-from ufc_predictor.data import load_fighter_snapshots, validate_snapshot_frame
-from ufc_predictor.exceptions import UFCPredictorError
-from ufc_predictor.inference.fighter_lookup import (
+from ufc_ml_core.config import AppConfig, load_config
+from ufc_ml_core.data import load_fighter_snapshots, validate_snapshot_frame
+from ufc_ml_core.exceptions import UFCPredictorError
+from ufc_ml_core.inference.fighter_lookup import (
     AmbiguousFighterError,
     FighterLookup,
     FighterLookupError,
     SnapshotUnavailableError,
 )
-from ufc_predictor.inference.predictor import SameFighterError
-from ufc_predictor.workflows import predict_fight
+from ufc_ml_core.inference.predictor import SameFighterError
+from ufc_ml_core.workflows import predict_fight
 
 _FIGHTER_ID_PATTERN = re.compile(r"\b[0-9a-f]{12,}\b", re.IGNORECASE)
 

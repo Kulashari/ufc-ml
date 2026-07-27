@@ -230,9 +230,9 @@ reports/*
 *.onnx
 
 # React/Vite local build outputs
-src/frontend/node_modules/
-src/frontend/dist/
-src/frontend/.vite/
+src/ufc-ml.web/node_modules/
+src/ufc-ml.web/dist/
+src/ufc-ml.web/.vite/
 
 # Local configuration and credentials
 .env.*

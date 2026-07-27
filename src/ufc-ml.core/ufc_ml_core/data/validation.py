@@ -11,15 +11,15 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_bool_dtype, is_numeric_dtype
 
-from ufc_predictor.config import DataConfig
-from ufc_predictor.data.loader import dataframe_sha256
-from ufc_predictor.data.splits import SplitSummary, validate_configured_splits
-from ufc_predictor.exceptions import (
+from ufc_ml_core.config import DataConfig
+from ufc_ml_core.data.loader import dataframe_sha256
+from ufc_ml_core.data.splits import SplitSummary, validate_configured_splits
+from ufc_ml_core.exceptions import (
     DataValidationError,
     LeakageValidationError,
     SchemaValidationError,
 )
-from ufc_predictor.features.registry import FeatureRegistry
+from ufc_ml_core.features.registry import FeatureRegistry
 
 FORBIDDEN_POST_FIGHT_COLUMNS = frozenset(
     {

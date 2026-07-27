@@ -10,15 +10,15 @@ import numpy as np
 import pandas as pd
 from pandas.api.types import is_bool_dtype, is_numeric_dtype
 
-from ufc_predictor.config import DataConfig
-from ufc_predictor.data.loader import dataframe_sha256
-from ufc_predictor.data.validation import assert_no_post_fight_columns, require_columns
-from ufc_predictor.exceptions import (
+from ufc_ml_core.config import DataConfig
+from ufc_ml_core.data.loader import dataframe_sha256
+from ufc_ml_core.data.validation import assert_no_post_fight_columns, require_columns
+from ufc_ml_core.exceptions import (
     AmbiguousFighterError,
     FighterNotFoundError,
     SnapshotValidationError,
 )
-from ufc_predictor.features.registry import discover_feature_columns
+from ufc_ml_core.features.registry import discover_feature_columns
 
 
 @dataclass(frozen=True, slots=True)

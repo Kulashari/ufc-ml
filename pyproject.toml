@@ -36,27 +36,30 @@ dev = [
 ]
 
 [project.scripts]
-ufc-predictor = "ufc_predictor.cli:app"
+ufc-predictor = "ufc_ml_api.cli:app"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ufc_predictor"]
+packages = [
+  "src/ufc-ml.core/ufc_ml_core",
+  "src/ufc-ml.api/ufc_ml_api",
+]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["src"]
+src = ["src/ufc-ml.core", "src/ufc-ml.api"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*.py" = ["T201"]
-"src/ufc_predictor/cli.py" = ["B008"]
+"src/ufc-ml.api/ufc_ml_api/cli.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.11"
-packages = ["ufc_predictor"]
-mypy_path = "src"
+packages = ["ufc_ml_core", "ufc_ml_api"]
+mypy_path = ["src/ufc-ml.core", "src/ufc-ml.api"]
 strict = true
 warn_unreachable = true
 show_error_codes = true

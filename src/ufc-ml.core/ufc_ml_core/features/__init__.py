@@ -1,13 +1,13 @@
 """Feature discovery, ordering, and semantic grouping."""
 
-from ufc_predictor.features.groups import (
+from ufc_ml_core.features.groups import (
     REQUIRED_ABLATION_GROUPS,
     FeatureGroup,
     ablation_feature_groups,
     classify_feature,
     group_features,
 )
-from ufc_predictor.features.registry import (
+from ufc_ml_core.features.registry import (
     FeatureRegistry,
     FeatureSpec,
     discover_feature_columns,

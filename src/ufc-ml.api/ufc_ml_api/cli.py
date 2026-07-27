@@ -10,16 +10,16 @@ from typing import Any
 
 import typer
 
-from ufc_predictor import __version__
-from ufc_predictor.config import load_config
-from ufc_predictor.data import (
+from ufc_ml_core import __version__
+from ufc_ml_core.config import load_config
+from ufc_ml_core.data import (
     assign_configured_splits,
     load_dataset_bundle,
     validate_feature_dictionary,
     validate_model_dataset,
     validate_snapshot_frame,
 )
-from ufc_predictor.exceptions import DataValidationError, UFCPredictorError
+from ufc_ml_core.exceptions import DataValidationError, UFCPredictorError
 
 app = typer.Typer(
     name="ufc-predictor",
@@ -186,7 +186,7 @@ def train_command(
     """Explicitly fit on train, select/calibrate on validation, and save a run."""
 
     try:
-        from ufc_predictor.workflows import train_model
+        from ufc_ml_core.workflows import train_model
 
         config = load_config(config_path)
         result = train_model(
@@ -244,7 +244,7 @@ def evaluate_final_command(
     """Explicitly score the untouched chronological test split once."""
 
     try:
-        from ufc_predictor.workflows import evaluate_final
+        from ufc_ml_core.workflows import evaluate_final
 
         config = load_config(config_path)
         result = evaluate_final(config, run_dir=run_dir, overwrite=overwrite)
@@ -298,7 +298,7 @@ def serve_command(
     """Serve the selected trusted artifact to the local React prediction UI."""
 
     try:
-        from ufc_predictor.api import run_server
+        from ufc_ml_api.api import run_server
 
         run_server(
             config_path=config_path,
@@ -379,7 +379,7 @@ def predict_command(
     """Predict a matchup using the current UTC server timestamp."""
 
     try:
-        from ufc_predictor.workflows import predict_fight
+        from ufc_ml_core.workflows import predict_fight
 
         config = load_config(config_path)
         result = predict_fight(

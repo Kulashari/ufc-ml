@@ -12,8 +12,8 @@ import numpy as np
 import pandas as pd
 from pandas.errors import EmptyDataError, ParserError
 
-from ufc_predictor.config import DataConfig
-from ufc_predictor.exceptions import (
+from ufc_ml_core.config import DataConfig
+from ufc_ml_core.exceptions import (
     DataLoadError,
     FingerprintMismatchError,
     SchemaValidationError,

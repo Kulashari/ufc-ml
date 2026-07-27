@@ -14,7 +14,7 @@ from typing import Any, Literal, Self
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
-from ufc_predictor.exceptions import ConfigurationError
+from ufc_ml_core.exceptions import ConfigurationError
 
 
 class StrictModel(BaseModel):

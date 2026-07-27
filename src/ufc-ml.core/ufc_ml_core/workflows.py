@@ -19,15 +19,15 @@ from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
-from ufc_predictor.artifacts import (
+from ufc_ml_core.artifacts import (
     LoadedArtifacts,
     collect_runtime_versions,
     load_artifacts,
     save_artifact_version,
     update_artifact_metrics,
 )
-from ufc_predictor.config import AppConfig
-from ufc_predictor.data import (
+from ufc_ml_core.config import AppConfig
+from ufc_ml_core.data import (
     DatasetBundle,
     DatasetValidationSummary,
     SplitFrames,
@@ -40,7 +40,7 @@ from ufc_predictor.data import (
     validate_model_dataset,
     validate_snapshot_frame,
 )
-from ufc_predictor.evaluation import (
+from ufc_ml_core.evaluation import (
     EvaluationReport,
     build_evaluation_report,
     confidence_bands,
@@ -48,10 +48,10 @@ from ufc_predictor.evaluation import (
     experience_bands,
     render_markdown_report,
 )
-from ufc_predictor.exceptions import DataValidationError
-from ufc_predictor.features import FeatureRegistry, ablation_feature_groups
-from ufc_predictor.inference import FightPredictor, MatchupContext
-from ufc_predictor.models import (
+from ufc_ml_core.exceptions import DataValidationError
+from ufc_ml_core.features import FeatureRegistry, ablation_feature_groups
+from ufc_ml_core.inference import FightPredictor, MatchupContext
+from ufc_ml_core.models import (
     LogisticCandidate,
     ModelScore,
     OptunaXGBoostSpace,

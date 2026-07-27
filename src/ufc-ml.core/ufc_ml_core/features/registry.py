@@ -9,8 +9,8 @@ from typing import Self, overload
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, field_validator
 
-from ufc_predictor.exceptions import FeatureRegistryError
-from ufc_predictor.features.groups import FeatureGroup, classify_feature, group_features
+from ufc_ml_core.exceptions import FeatureRegistryError
+from ufc_ml_core.features.groups import FeatureGroup, classify_feature, group_features
 
 DICTIONARY_REQUIRED_COLUMNS = frozenset({"column", "role", "available_pre_fight", "description"})
 MODEL_FEATURE_ROLE = "model_feature"
