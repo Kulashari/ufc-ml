@@ -95,11 +95,7 @@ export function PredictionResult({ prediction, error, isLoading }: PredictionRes
   const warnings = prediction.warnings ?? prediction.confidence?.warnings ?? [];
   const confidenceTier = prediction.confidence_tier ?? prediction.confidence?.tier ?? "reduced";
   const confidenceScore = prediction.confidence?.score;
-  const winnerName = predictedWinnerName(
-    prediction.predicted_winner_name,
-    prediction.predicted_winner_id,
-    [prediction.fighter_a, prediction.fighter_b],
-  );
+  const winnerName = predictedWinnerName(prediction.predicted_winner_name);
 
   return (
     <section className="panel result-panel" aria-live="polite" aria-labelledby="prediction-title">

@@ -5,7 +5,6 @@ export interface PredictionRequest {
 }
 
 export interface Fighter {
-  fighter_id: string;
   fighter_name: string;
   display_name?: string | null;
 }
@@ -14,7 +13,6 @@ export interface PredictionWarning {
   code: string;
   severity: "info" | "warning" | "critical" | string;
   message: string;
-  details?: Record<string, unknown>;
 }
 
 export interface ConfidenceAssessment {
@@ -37,7 +35,6 @@ export interface PredictionResponse {
   prior_ufc_fights_b: number;
   snapshot_date_a?: string | null;
   snapshot_date_b?: string | null;
-  predicted_winner_id?: string | null;
   predicted_winner_name?: string | null;
   is_even_probability?: boolean;
   orientation_disagreement?: number;

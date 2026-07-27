@@ -217,9 +217,9 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# UFC predictor: local datasets and generated outputs
-data/*.csv
-data/processed/
+# UFC predictor: private training data and generated model outputs
+# Keep every local data source outside the public source repository.
+/data/
 artifacts/*
 !artifacts/.gitkeep
 reports/*
@@ -228,17 +228,29 @@ reports/*
 *.pkl
 *.pickle
 *.onnx
+*.parquet
+*.feather
+*.arrow
 
 # React/Vite local build outputs
 src/ufc-ml.web/node_modules/
 src/ufc-ml.web/dist/
 src/ufc-ml.web/.vite/
+src/ufc-ml.web/.vercel/
+
+# Ephemeral deployment asset checkouts
+.runtime-assets/
 
 # Local configuration and credentials
 .env.*
 !.env.example
 secrets/
 credentials/
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
 
 # Editors and OS metadata
 .idea/

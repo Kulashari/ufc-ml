@@ -202,20 +202,10 @@ export function fighterDisplayName(fighter: Fighter | null | undefined): string 
   );
 }
 
-export function resolveFighterName(
-  fighterId: string | null | undefined,
-  fighters: readonly Fighter[],
-): string {
-  const fighter = fighters.find((candidate) => candidate.fighter_id === fighterId);
-  return fighterDisplayName(fighter);
-}
-
 export function predictedWinnerName(
   winnerName: string | null | undefined,
-  winnerId: string | null | undefined,
-  fighters: readonly Fighter[],
 ): string {
-  return cleanFighterName(winnerName) ?? resolveFighterName(winnerId, fighters);
+  return cleanFighterName(winnerName) ?? "Unknown Fighter";
 }
 
 export function formatUserFacingError(message: string): string {

@@ -1,6 +1,9 @@
 import { formatUserFacingError } from "./displayLabels";
 import type { PredictionRequest, PredictionResponse } from "./types";
 
+const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const apiBaseUrl = configuredApiBaseUrl ? configuredApiBaseUrl.replace(/\/+$/, "") : "";
+
 export class PredictionApiError extends Error {
   constructor(message: string, readonly status?: number) {
     super(message);
@@ -31,14 +34,14 @@ export async function requestPrediction(
   let response: Response;
 
   try {
-    response = await fetch("/api/predict", {
+    response = await fetch(`${apiBaseUrl}/api/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(request),
     });
   } catch {
     throw new PredictionApiError(
-      "Could not reach the prediction service. Make sure the Python API is running.",
+      "Could not reach the prediction service. Check your connection and try again.",
     );
   }
 

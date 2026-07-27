@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: ufc-ml-api
+    runtime: python
+    plan: free
+    buildCommand: python -m pip install ".[web]"
+    startCommand: >-
+      python -m ufc_ml_api serve --config configs/default.yaml
+      --run-dir artifacts/20260723T181548Z-xgboost --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: GITHUB_ASSETS_TOKEN
+        sync: false
+      - key: UFC_ML_ASSETS_REPOSITORY
+        sync: false
+      - key: UFC_ML_ASSETS_REF
+        sync: false
+      - key: UFC_ML_CORS_ORIGINS
+        sync: false

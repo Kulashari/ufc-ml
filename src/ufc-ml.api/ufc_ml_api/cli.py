@@ -267,11 +267,12 @@ def serve_command(
     run_dir: Path = typer.Option(
         ...,
         "--run-dir",
-        exists=True,
         file_okay=False,
         readable=True,
-        resolve_path=True,
-        help="Trusted versioned artifact directory exposed by the local UI API.",
+        help=(
+            "Trusted versioned artifact directory. Keep this relative to the private asset bundle "
+            "when UFC_ML_ASSETS_REPOSITORY is configured."
+        ),
     ),
     config_path: Path = typer.Option(
         Path("configs/default.yaml"),

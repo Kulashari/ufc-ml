@@ -220,6 +220,80 @@ The generated `src/ufc-ml.web/dist` directory is intentionally ignored by Git. I
 reports an error, use the same spelling and optional division rules described in the CLI
 prediction section above.
 
+## Feedback deployment
+
+Deploy the React application and prediction API separately. The public repository contains
+only source code and safe deployment templates; processed data, trained artifacts, tokens,
+and host-specific values stay outside Git.
+
+```text
+Vercel web app  ->  public FastAPI URL  ->  private GitHub asset repository
+```
+
+### Private assets
+
+Store the following paths in a separate private repository, preserving their layout:
+
+```text
+data/processed/
+artifacts/20260723T181548Z-xgboost/
+```
+
+The API can retrieve that repository at startup when these backend-only variables are set:
+
+```text
+GITHUB_ASSETS_TOKEN          fine-grained token with Contents: Read-only
+UFC_ML_ASSETS_REPOSITORY     owner/private-assets-repository
+UFC_ML_ASSETS_REF            full immutable Git commit SHA for the asset revision
+UFC_ML_CORS_ORIGINS          exact Vercel origin, such as https://your-app.vercel.app
+```
+
+Get the pinned asset revision from the private repository with `git rev-parse HEAD`. The
+bootstrapper downloads that revision using an authorization header, unpacks it outside the
+public checkout, validates the expected files, and never writes the token to disk or logs.
+It rejects Git LFS pointer files, so verify that a GitHub source archive contains the actual
+LFS objects before using LFS-backed assets.
+
+Set these values only in the API host's secret/environment-variable settings. Do not add a
+real token to `.env` files, source code, GitHub Actions logs, Vercel, or any `VITE_*`
+variable. The browser receives only names and user-facing prediction fields; it does not
+receive fighter IDs, artifact paths, model metadata, feature rows, or source fingerprints.
+
+### API on Render
+
+The root [render.yaml](render.yaml) provides a feedback-deployment template for the API.
+Create a Render Blueprint from the `main` branch and provide each `sync: false` value in the
+Render dashboard. The template installs the API dependencies, binds Uvicorn to Render's
+assigned port, downloads the private assets at runtime, and checks `/api/health`.
+
+After the service is live, open:
+
+```text
+https://your-api.onrender.com/api/health
+```
+
+It should return `"status": "ok"` before you connect the web app.
+
+### Web app on Vercel
+
+Import this repository in Vercel and configure:
+
+```text
+Root Directory: src/ufc-ml.web
+Build Command:  npm run build
+Output Directory: dist
+```
+
+Add the following Vercel environment variable for Production (and Preview if desired):
+
+```text
+VITE_API_BASE_URL=https://your-api.onrender.com
+```
+
+`VITE_*` values are embedded in the browser bundle, so this must be the public API origin
+only—never a token, private repository URL with credentials, or other secret. The web app
+uses `/api` locally through Vite's proxy and the configured public origin after deployment.
+
 ## GPU and CPU behavior
 
 XGBoost uses `tree_method="hist"`. With `device: auto`, an explicit tiny CUDA probe runs
@@ -255,12 +329,12 @@ src/
   ufc-ml.api/     HTTP and command-line service (Python import: ufc_ml_api)
     ufc_ml_api/
       api.py      local FastAPI adapter for the React prediction UI
+      assets.py   secure, pinned private-asset bootstrap for deployed API instances
       cli.py      explicit command registration
   ufc-ml.web/     standalone React + TypeScript Vite application
     src/
       components/ reusable prediction form and result UI
 configs/         checked YAML configuration
-scripts/         lightweight environment checks
 reports/         generated reports (ignored except `.gitkeep`)
 artifacts/       generated model runs (ignored except `.gitkeep`)
 ```
