@@ -13,10 +13,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Annotated, Any
 from urllib.parse import urlparse
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -25,6 +25,7 @@ from ufc_ml_core.data import load_fighter_snapshots, validate_snapshot_frame
 from ufc_ml_core.exceptions import UFCPredictorError
 from ufc_ml_core.inference.fighter_lookup import (
     AmbiguousFighterError,
+    FighterCandidate,
     FighterLookup,
     FighterLookupError,
     SnapshotUnavailableError,
@@ -61,14 +62,23 @@ class PredictionRequest(BaseModel):
 
     fighter_a: str = Field(min_length=1, max_length=160)
     fighter_b: str = Field(min_length=1, max_length=160)
+    fighter_a_id: str | None = Field(default=None, max_length=256)
+    fighter_b_id: str | None = Field(default=None, max_length=256)
     division: str | None = Field(default=None, max_length=80)
 
-    @field_validator("division")
+    @field_validator("fighter_a_id", "fighter_b_id", "division")
     @classmethod
-    def empty_division_is_none(cls, value: str | None) -> str | None:
-        """Treat an empty optional form field as an inferred division."""
+    def empty_optional_value_is_none(cls, value: str | None) -> str | None:
+        """Treat an empty optional form field as absent."""
 
         return value or None
+
+
+class FighterOptionResponse(BaseModel):
+    """Minimal fighter identity returned to an autocomplete control."""
+
+    id: str
+    name: str
 
 
 class HealthResponse(BaseModel):
@@ -191,6 +201,13 @@ def _fighter_name(lookup: FighterLookup, fighter_id: str) -> str:
     except FighterLookupError:
         return "Unknown Fighter"
     return candidate.display_name or candidate.fighter_name or "Unknown Fighter"
+
+
+def _fighter_option(candidate: FighterCandidate) -> FighterOptionResponse:
+    """Return a stable lookup ID and safe canonical display name."""
+
+    name = candidate.display_name or candidate.fighter_name or "Unknown Fighter"
+    return FighterOptionResponse(id=candidate.fighter_id, name=name)
 
 
 def _replace_internal_ids(message: str, lookup: FighterLookup) -> str:
@@ -326,6 +343,18 @@ def create_app(
             snapshot_end_date=availability.snapshot_end_date,
         )
 
+    @app.get("/api/fighters", response_model=list[FighterOptionResponse])
+    def search_fighters(
+        query: Annotated[str, Query(min_length=1, max_length=160)],
+        limit: Annotated[int, Query(ge=1, le=20)] = 8,
+    ) -> list[FighterOptionResponse]:
+        """Return canonical fighter names for the matchup autocomplete controls."""
+
+        return [
+            _fighter_option(candidate)
+            for candidate in availability.lookup.search(query, limit=limit)
+        ]
+
     @app.post("/api/predict")
     def predict(request: PredictionRequest) -> dict[str, Any]:
         """Run the existing leakage-safe inference workflow for one matchup."""
@@ -336,6 +365,8 @@ def create_app(
                 run_dir=resolved_run_dir,
                 fighter_a=request.fighter_a,
                 fighter_b=request.fighter_b,
+                fighter_a_id=request.fighter_a_id,
+                fighter_b_id=request.fighter_b_id,
                 division=request.division,
             )
             return _public_prediction(result)
@@ -365,4 +396,4 @@ def run_server(
     uvicorn.run(create_app(config_path=config_path, run_dir=run_dir), host=host, port=port)
 
 
-__all__ = ["PredictionRequest", "create_app", "run_server"]
+__all__ = ["FighterOptionResponse", "PredictionRequest", "create_app", "run_server"]

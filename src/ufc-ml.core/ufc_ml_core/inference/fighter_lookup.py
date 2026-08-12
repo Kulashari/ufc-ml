@@ -350,6 +350,53 @@ class FighterLookup:
             suggestions=suggestions,
         )
 
+    def search(self, query: str, *, limit: int = 8) -> tuple[FighterCandidate, ...]:
+        """Return distinct autocomplete candidates ordered by match quality.
+
+        Exact labels and full-name prefixes rank ahead of word prefixes and
+        general substring matches. Names and configured aliases share the same
+        normalized, accent-insensitive index used by :meth:`lookup`, while the
+        returned candidate always carries the fighter's canonical display name.
+        """
+
+        if not isinstance(query, str):
+            raise TypeError("fighter query must be a string")
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+            raise ValueError("fighter search limit must be a positive integer")
+
+        key = normalize_name(query)
+        if not key:
+            return ()
+
+        ranks_by_id: dict[str, int] = {}
+        for indexed_label, fighter_ids in self._search_index.items():
+            if indexed_label == key:
+                rank = 0
+            elif indexed_label.startswith(key):
+                rank = 1
+            elif any(part.startswith(key) for part in indexed_label.split()):
+                rank = 2
+            elif key in indexed_label:
+                rank = 3
+            else:
+                continue
+
+            for fighter_id in fighter_ids:
+                current_rank = ranks_by_id.get(fighter_id)
+                if current_rank is None or rank < current_rank:
+                    ranks_by_id[fighter_id] = rank
+
+        candidates = (self.candidate_for_id(fighter_id) for fighter_id in ranks_by_id)
+        ordered = sorted(
+            candidates,
+            key=lambda candidate: (
+                ranks_by_id[candidate.fighter_id],
+                normalize_name(candidate.display_name or candidate.fighter_name),
+                candidate.fighter_id,
+            ),
+        )
+        return tuple(ordered[:limit])
+
     def resolve(self, query: str, *, fighter_id: str | None = None) -> FighterCandidate:
         """Resolve a fighter, requiring an explicit stable ID when ambiguous."""
 
