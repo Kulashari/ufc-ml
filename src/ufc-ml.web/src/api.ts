@@ -1,5 +1,5 @@
 import { formatUserFacingError } from "./displayLabels";
-import type { PredictionRequest, PredictionResponse } from "./types";
+import type { FighterOption, PredictionRequest, PredictionResponse } from "./types";
 
 const configuredApiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 const apiBaseUrl = configuredApiBaseUrl ? configuredApiBaseUrl.replace(/\/+$/, "") : "";
@@ -9,6 +9,22 @@ export class PredictionApiError extends Error {
     super(message);
     this.name = "PredictionApiError";
   }
+}
+
+export class FighterSearchApiError extends Error {
+  constructor(message: string, readonly status?: number) {
+    super(message);
+    this.name = "FighterSearchApiError";
+  }
+}
+
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error as { name: unknown }).name === "AbortError"
+  );
 }
 
 function errorMessage(payload: unknown): string | undefined {
@@ -60,4 +76,57 @@ export async function requestPrediction(
   }
 
   return payload as PredictionResponse;
+}
+
+export async function searchFighters(
+  query: string,
+  signal?: AbortSignal,
+  limit = 8,
+): Promise<FighterOption[]> {
+  const trimmedQuery = query.trim();
+  if (!trimmedQuery) {
+    return [];
+  }
+
+  const params = new URLSearchParams({
+    query: trimmedQuery,
+    limit: String(limit),
+  });
+
+  let response: Response;
+  try {
+    response = await fetch(`${apiBaseUrl}/api/fighters?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+      signal,
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw error;
+    }
+    throw new FighterSearchApiError(
+      "Could not reach the fighter search service. Check your connection and try again.",
+    );
+  }
+
+  const payload: unknown = await response.json().catch(() => undefined);
+  if (!response.ok) {
+    throw new FighterSearchApiError(
+      formatUserFacingError(
+        errorMessage(payload) ?? "The fighter search service could not complete this request.",
+      ),
+      response.status,
+    );
+  }
+
+  if (!Array.isArray(payload)) {
+    throw new FighterSearchApiError("The fighter search service returned an unexpected response.");
+  }
+
+  return payload.filter(
+    (candidate): candidate is FighterOption =>
+      Boolean(candidate) &&
+      typeof candidate === "object" &&
+      typeof (candidate as Record<string, unknown>).id === "string" &&
+      typeof (candidate as Record<string, unknown>).name === "string",
+  );
 }

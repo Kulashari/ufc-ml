@@ -2,7 +2,8 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 
 import { DIVISION_OPTIONS } from "../displayLabels";
-import type { PredictionRequest } from "../types";
+import type { FighterOption, PredictionRequest } from "../types";
+import { FighterAutocomplete } from "./FighterAutocomplete";
 
 interface PredictionFormProps {
   isLoading: boolean;
@@ -10,30 +11,30 @@ interface PredictionFormProps {
 }
 
 export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
-  const [fighterA, setFighterA] = useState("");
-  const [fighterB, setFighterB] = useState("");
+  const [fighterA, setFighterA] = useState<FighterOption | null>(null);
+  const [fighterB, setFighterB] = useState<FighterOption | null>(null);
   const [division, setDivision] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const first = fighterA.trim();
-    const second = fighterB.trim();
 
-    if (!first || !second) {
-      setFormError("Enter both fighter names.");
+    if (!fighterA || !fighterB) {
+      setFormError("Select both fighters from the suggestions.");
       return;
     }
 
-    if (first.localeCompare(second, undefined, { sensitivity: "accent" }) === 0) {
+    if (fighterA.id === fighterB.id) {
       setFormError("Choose two different fighters.");
       return;
     }
 
     setFormError(null);
     await onSubmit({
-      fighter_a: first,
-      fighter_b: second,
+      fighter_a: fighterA.name,
+      fighter_b: fighterB.name,
+      fighter_a_id: fighterA.id,
+      fighter_b_id: fighterB.id,
       ...(division.trim() ? { division: division.trim() } : {}),
     });
   }
@@ -43,47 +44,41 @@ export function PredictionForm({ isLoading, onSubmit }: PredictionFormProps) {
       <div className="panel-heading">
         <p className="section-kicker">New prediction</p>
         <h2 id="matchup-form-title">Build a matchup</h2>
-        <p className="muted">Use the fighters&apos; names as they appear in the dataset.</p>
+        <p className="muted">Search for and select two fighters.</p>
       </div>
 
       <form className="matchup-form" onSubmit={submit} noValidate>
-        <label className="field-label" htmlFor="fighter-a">
-          Fighter A
-          <input
-            id="fighter-a"
-            name="fighterA"
-            type="text"
-            value={fighterA}
-            onChange={(event) => setFighterA(event.target.value)}
-            placeholder="e.g. Ilia Topuria"
-            autoComplete="off"
-            autoCapitalize="words"
-            enterKeyHint="next"
-            spellCheck={false}
-            disabled={isLoading}
-            required
-          />
-        </label>
+        <FighterAutocomplete
+          id="fighter-a"
+          name="fighterA"
+          label="Fighter A"
+          value={fighterA}
+          onChange={(fighter) => {
+            setFighterA(fighter);
+            setFormError(null);
+          }}
+          excludeFighterId={fighterB?.id}
+          placeholder="e.g. Ilia Topuria"
+          enterKeyHint="next"
+          disabled={isLoading}
+        />
 
         <div className="versus" aria-hidden="true"><span>VS</span></div>
 
-        <label className="field-label" htmlFor="fighter-b">
-          Fighter B
-          <input
-            id="fighter-b"
-            name="fighterB"
-            type="text"
-            value={fighterB}
-            onChange={(event) => setFighterB(event.target.value)}
-            placeholder="e.g. Max Holloway"
-            autoComplete="off"
-            autoCapitalize="words"
-            enterKeyHint="done"
-            spellCheck={false}
-            disabled={isLoading}
-            required
-          />
-        </label>
+        <FighterAutocomplete
+          id="fighter-b"
+          name="fighterB"
+          label="Fighter B"
+          value={fighterB}
+          onChange={(fighter) => {
+            setFighterB(fighter);
+            setFormError(null);
+          }}
+          excludeFighterId={fighterA?.id}
+          placeholder="e.g. Max Holloway"
+          enterKeyHint="done"
+          disabled={isLoading}
+        />
 
         <label className="field-label" htmlFor="division">
           Division <span className="optional">optional</span>

@@ -134,13 +134,26 @@ select:disabled {
   font-weight: 700;
 }
 
+.fighter-autocomplete {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.autocomplete-control {
+  position: relative;
+  min-width: 0;
+}
+
 .optional {
   color: #738198;
   font-weight: 500;
 }
 
 .field-label input,
-.field-label select {
+.field-label select,
+.autocomplete-control input {
   width: 100%;
   min-width: 0;
   min-height: 48px;
@@ -158,16 +171,103 @@ select:disabled {
   color: #728096;
 }
 
+.autocomplete-control input::placeholder {
+  color: #728096;
+}
+
 .field-label input:focus,
-.field-label select:focus {
+.field-label select:focus,
+.autocomplete-control input:focus {
   border-color: #e05b68;
   background: #131b27;
   box-shadow: 0 0 0 3px rgba(224, 91, 104, 0.18);
 }
 
 .field-label input:disabled,
-.field-label select:disabled {
+.field-label select:disabled,
+.autocomplete-control input:disabled {
   opacity: 0.58;
+}
+
+.autocomplete-control input {
+  padding-right: 42px;
+}
+
+.autocomplete-spinner {
+  position: absolute;
+  z-index: 22;
+  top: calc(24px - 7.5px);
+  right: 14px;
+  border-color: rgba(255, 255, 255, 0.25);
+  border-top-color: #e66a78;
+  pointer-events: none;
+}
+
+.autocomplete-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  max-height: min(280px, 45vh);
+  overflow-y: auto;
+  margin: 0;
+  border: 1px solid #354154;
+  border-radius: 11px;
+  background: #111824;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.48);
+  padding: 5px;
+  list-style: none;
+  scrollbar-color: #526077 #111824;
+}
+
+.autocomplete-option,
+.autocomplete-message {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  border-radius: 7px;
+  padding: 9px 10px;
+  color: #e8edf5;
+  font-size: 0.9rem;
+  line-height: 1.35;
+}
+
+.autocomplete-option {
+  cursor: pointer;
+}
+
+.autocomplete-option.is-active {
+  background: rgba(224, 91, 104, 0.2);
+  color: #fff;
+}
+
+@media (hover: hover) {
+  .autocomplete-option:hover {
+    background: rgba(224, 91, 104, 0.2);
+    color: #fff;
+  }
+}
+
+.autocomplete-message {
+  color: #8f9db1;
+}
+
+.autocomplete-error {
+  color: #ffabb4;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  margin: -1px;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  border: 0;
+  padding: 0;
+  white-space: nowrap;
 }
 
 .versus {
@@ -687,8 +787,14 @@ select:disabled {
 
 @media (pointer: coarse) {
   .field-label input,
-  .field-label select {
+  .field-label select,
+  .autocomplete-control input {
     font-size: 1rem;
+  }
+
+  .autocomplete-option,
+  .autocomplete-message {
+    min-height: 48px;
   }
 }
 

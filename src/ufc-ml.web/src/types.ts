@@ -1,7 +1,14 @@
 export interface PredictionRequest {
   fighter_a: string;
   fighter_b: string;
+  fighter_a_id?: string;
+  fighter_b_id?: string;
   division?: string;
+}
+
+export interface FighterOption {
+  id: string;
+  name: string;
 }
 
 export interface Fighter {
