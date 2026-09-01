@@ -22,14 +22,22 @@ dependencies = [
 
 [project.optional-dependencies]
 optuna = ["optuna>=3.6"]
+latestdata = [
+  "beautifulsoup4>=4.12,<5",
+  "lxml>=5,<7",
+  "playwright>=1.49,<2",
+]
 web = [
   "fastapi>=0.115,<1.0",
   "uvicorn[standard]>=0.30,<1.0",
 ]
 dev = [
+  "beautifulsoup4>=4.12,<5",
   "fastapi>=0.115,<1.0",
+  "lxml>=5,<7",
   "mypy>=1.10",
   "pandas-stubs>=2.1",
+  "playwright>=1.49,<2",
   "ruff>=0.6",
   "types-PyYAML>=6.0",
   "uvicorn[standard]>=0.30,<1.0",
@@ -37,17 +45,19 @@ dev = [
 
 [project.scripts]
 ufc-predictor = "ufc_ml_api.cli:app"
+ufc-latest-data = "ufc_ml_latestdatafetcher.cli:app"
 
 [tool.hatch.build.targets.wheel]
 packages = [
   "src/ufc-ml.core/ufc_ml_core",
   "src/ufc-ml.api/ufc_ml_api",
+  "src/ufc-ml.latestdatafetcher/src/ufc_ml_latestdatafetcher",
 ]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-src = ["src/ufc-ml.core", "src/ufc-ml.api"]
+src = ["src/ufc-ml.core", "src/ufc-ml.api", "src/ufc-ml.latestdatafetcher/src"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
@@ -55,16 +65,17 @@ select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
 [tool.ruff.lint.per-file-ignores]
 "scripts/*.py" = ["T201"]
 "src/ufc-ml.api/ufc_ml_api/cli.py" = ["B008"]
+"src/ufc-ml.latestdatafetcher/src/ufc_ml_latestdatafetcher/cli.py" = ["B008"]
 
 [tool.mypy]
 python_version = "3.11"
-packages = ["ufc_ml_core", "ufc_ml_api"]
-mypy_path = ["src/ufc-ml.core", "src/ufc-ml.api"]
+packages = ["ufc_ml_core", "ufc_ml_api", "ufc_ml_latestdatafetcher"]
+mypy_path = ["src/ufc-ml.core", "src/ufc-ml.api", "src/ufc-ml.latestdatafetcher/src"]
 strict = true
 warn_unreachable = true
 show_error_codes = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["xgboost", "xgboost.*", "sklearn.*", "joblib"]
+module = ["xgboost", "xgboost.*", "sklearn.*", "joblib", "bs4", "bs4.*", "playwright.*"]
 ignore_missing_imports = true

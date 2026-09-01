@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from datetime import date
 from enum import StrEnum
 from pathlib import Path
 from typing import Any
@@ -147,6 +148,135 @@ def validate_data_command(
             }
         )
     except (UFCPredictorError, ValueError, OSError) as exc:
+        _abort(exc)
+
+
+@data_app.command("build-features")
+def build_features_command(
+    config_path: Path = typer.Option(
+        Path("configs/default.yaml"),
+        "--config",
+        exists=True,
+        dir_okay=False,
+        readable=True,
+        resolve_path=True,
+        help="YAML project configuration used for the 71-column contract.",
+    ),
+    legacy_fights: Path | None = typer.Option(
+        None,
+        "--legacy-fights",
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        help="Legacy raw fight CSV; defaults to data/ufc_gold_dataset_final.csv.",
+    ),
+    legacy_profiles: Path | None = typer.Option(
+        None,
+        "--legacy-profiles",
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        help="Legacy fighter-profile CSV; defaults to data/ufc_fighters_final.csv.",
+    ),
+    normalized_sqlite: Path | None = typer.Option(
+        None,
+        "--normalized-sqlite",
+        file_okay=True,
+        dir_okay=False,
+        readable=True,
+        help="Latest-data SQLite source; defaults to data/interim/ufcstats/ufcstats.sqlite3.",
+    ),
+    output_root: Path | None = typer.Option(
+        None,
+        "--output-root",
+        file_okay=False,
+        help="Candidate root; defaults to data/candidates/featurebuilder.",
+    ),
+    through: str | None = typer.Option(
+        None,
+        "--through",
+        help="Inclusive event date cutoff; defaults to the newest local completed fight.",
+    ),
+    run_id: str | None = typer.Option(
+        None,
+        "--run-id",
+        help="Unique candidate directory suffix; defaults to a UTC timestamp.",
+    ),
+    bootstrap_baseline: bool = typer.Option(
+        True,
+        "--bootstrap-baseline/--reconstruct-baseline",
+        help=(
+            "Keep the checked-in 8,116 rows verbatim and seed new fights from the trusted "
+            "cutoff snapshot; use reconstruct only to audit the full raw rebuild."
+        ),
+    ),
+) -> None:
+    """Build a raw-to-71 candidate bundle without changing data/processed or fitting a model."""
+
+    try:
+        from ufc_ml_core.feature_building.pipeline import (
+            build_feature_candidate,
+            default_build_paths,
+        )
+
+        config = load_config(config_path)
+        paths = default_build_paths(config)
+        paths = replace(
+            paths,
+            legacy_fights_path=(
+                legacy_fights.resolve() if legacy_fights is not None else paths.legacy_fights_path
+            ),
+            legacy_profiles_path=(
+                legacy_profiles.resolve()
+                if legacy_profiles is not None
+                else paths.legacy_profiles_path
+            ),
+            normalized_sqlite_path=(
+                normalized_sqlite.resolve()
+                if normalized_sqlite is not None
+                else paths.normalized_sqlite_path
+            ),
+            candidate_root=(
+                output_root.resolve() if output_root is not None else paths.candidate_root
+            ),
+        )
+        through_date = date.fromisoformat(through) if through is not None else None
+        result = build_feature_candidate(
+            config,
+            paths=paths,
+            config_template_path=config_path,
+            through=through_date,
+            run_id=run_id,
+            bootstrap_baseline=bootstrap_baseline,
+        )
+        _emit(
+            {
+                "status": (
+                    "candidate_built_with_bootstrapped_baseline"
+                    if result.baseline_strategy == "bootstrap"
+                    else "candidate_built"
+                    if result.regression.exact
+                    else "candidate_requires_review"
+                ),
+                "run_dir": str(result.run_dir),
+                "model_dataset_path": str(result.model_dataset_path),
+                "snapshots_path": str(result.snapshots_path),
+                "profiles_path": str(result.profiles_path),
+                "feature_dictionary_path": str(result.feature_dictionary_path),
+                "manifest_path": str(result.manifest_path),
+                "regression_path": str(result.regression_path),
+                "generated_label_rows": result.generated_label_rows,
+                "new_label_rows": result.new_label_rows,
+                "baseline_rows_reused": result.baseline_rows_reused,
+                "baseline_strategy": result.baseline_strategy,
+                "generated_history_bouts": result.generated_history_bouts,
+                "through": result.through,
+                "regression": asdict(result.regression) | {"exact": result.regression.exact},
+                "processed_assets_modified": False,
+                "model_retrained": False,
+            }
+        )
+    except (UFCPredictorError, OSError, RuntimeError, ValueError) as exc:
         _abort(exc)
 
 
