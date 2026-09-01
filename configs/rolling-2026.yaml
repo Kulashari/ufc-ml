@@ -1,0 +1,89 @@
+project:
+  name: ufc-predictor
+  random_seed: 42
+
+data:
+  # This remains the trusted baseline's cutoff. The builder writes a candidate
+  # config with its newer cutoff after appending locally fetched fights.
+  model_dataset_path: data/processed/ufc_model_ready.csv
+  fighter_snapshots_path: data/processed/ufc_fighter_latest_features.csv
+  fighter_profiles_path: data/processed/ufc_fighter_profiles_clean.csv
+  feature_dictionary_path: data/processed/ufc_model_feature_dictionary.csv
+  expected_fight_count: 8116
+  expected_feature_count: 71
+  dataset_cutoff: 2026-03-07
+  # Full calendar years avoid partial-event leakage. 2025 is a sufficiently
+  # large tuning/calibration window; all 2026 events remain final holdout data.
+  train_end: 2024-12-31
+  validation_start: 2025-01-01
+  validation_end: 2025-12-31
+  test_start: 2026-01-01
+  date_column: event_date
+  split_column: split
+  target_column: target_a_win
+  fight_id_column: fight_id
+  feature_prefix: feature_
+  fighter_id_column: fighter_id
+  fighter_name_column: fighter_name
+  snapshot_date_column: as_of_date
+  last_fight_date_column: last_fight_date
+  dob_column: dob
+  split_labels:
+    train: train
+    validation: validation
+    test: test
+
+logistic:
+  penalty: both
+  c_values: [0.01, 0.03, 0.1, 0.3, 1.0, 3.0]
+  l1_ratios: [0.1, 0.5, 0.9]
+  max_iter: 5000
+  tolerance: 0.0001
+  class_weight: null
+
+xgboost:
+  device: auto
+  learning_rate: 0.04
+  max_depth: 4
+  min_child_weight: 3.0
+  subsample: 0.85
+  colsample_bytree: 0.85
+  gamma: 0.0
+  reg_alpha: 0.0
+  reg_lambda: 2.0
+  max_bin: 256
+  n_estimators: 1000
+  early_stopping_rounds: 50
+  tuning_trials: 30
+  search_space:
+    learning_rate: [0.01, 0.15]
+    max_depth: [2, 7]
+    min_child_weight: [1.0, 12.0]
+    subsample: [0.6, 1.0]
+    colsample_bytree: [0.6, 1.0]
+    gamma: [0.0, 5.0]
+    reg_alpha: [0.0, 5.0]
+    reg_lambda: [0.5, 15.0]
+    max_bin: [128, 512]
+    n_estimators: [200, 2000]
+
+calibration:
+  method: sigmoid
+  n_bins: 10
+
+selection:
+  log_loss_tie_tolerance: 0.005
+  max_calibration_error_regression: 0.01
+  max_subgroup_log_loss_regression: 0.02
+
+inference:
+  aliases: {}
+  stale_after_days: 180
+  limited_history_threshold: 3
+  orientation_disagreement_threshold: 0.1
+  allow_post_cutoff_prediction: true
+
+artifacts:
+  root_dir: artifacts
+  reports_dir: reports
+  format_version: 1

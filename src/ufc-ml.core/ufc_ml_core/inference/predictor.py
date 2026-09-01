@@ -293,6 +293,10 @@ def refresh_dynamic_snapshot(
             raise FeatureConstructionError(
                 f"fighter {snapshot.fighter_id} has a future last_fight_date"
             )
+    # Match the historical feature-builder contract.  Very old inactive
+    # profiles should not create an out-of-distribution layoff value merely
+    # because the current wall clock advanced since the training snapshot.
+    layoff_days = min(layoff_days, 3650)
     values["feature_log_layoff_days"] = log1p(layoff_days)
     values["_inference_layoff_days"] = None if last_fight_date is None else layoff_days
     if last_fight_date is None or layoff_days > 365:

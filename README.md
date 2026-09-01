@@ -68,6 +68,153 @@ Validate all configured assets without fitting a model:
 python -m ufc_ml_api data validate --config configs/default.yaml
 ```
 
+## Latest UFCStats data fetcher
+
+The standalone package in
+[`src/ufc-ml.latestdatafetcher`](src/ufc-ml.latestdatafetcher) incrementally caches and
+normalizes UFCStats pages. It is deliberately separate from both the prediction API and
+model training. Install its browser dependencies and Chromium once:
+
+```powershell
+python -m pip install -e ".[latestdata]"
+python -m playwright install chromium
+```
+
+Inspect the events newer than the configured model cutoff without fetching their details:
+
+```powershell
+python -m ufc_ml_latestdatafetcher discover
+```
+
+Fetch completed events missing from SQLite after that cutoff and through today:
+
+```powershell
+python -m ufc_ml_latestdatafetcher refresh
+```
+
+The completed-events endpoint can contain a future card. The fetcher filters dates through
+today and accepts only terminal `W/L`, `D/D`, or `NC/NC` fight pages. It uses one Playwright
+browser context for the current JavaScript challenge, makes serial throttled requests, and
+resumes from its local HTML cache. Each run refreshes the completed-events index, compares
+eligible UFCStats event IDs with transactionally committed SQLite events, and crawls only
+missing IDs. It reports the latest stored fight date but also repairs older gaps, so one
+later successful event cannot hide an earlier failed event. Use `--refresh-detail-pages`
+to deliberately revisit events already stored. The default refresh also crawls the A-Z fighter indexes
+and fetches directory profiles missing from the local baseline (plus incomplete baseline
+bios once), while selected-event
+profiles are refreshed through the cache. This preserves zero-history debutant coverage.
+
+UFCStats currently serves this crawl over `http://ufcstats.com`; the configured completed
+endpoint is `/statistics/events/completed?page=all` (the trailing comma from the original
+link is not part of the URL). SHA-256 records provide local reproducibility, not transport
+authentication. The idempotent CLI is intended to be invoked by Windows Task Scheduler,
+cron, or another external scheduler; it does not run a permanent background service.
+
+The page graph is:
+
+```text
+completed-events index
+  -> selected event details
+     -> every fight detail
+        -> both fighter profiles (current bio refresh/cache)
+  -> A-Z fighter directories
+     -> newly discovered fighter profiles
+```
+
+Local outputs are intentionally ignored by Git:
+
+```text
+data/raw/ufcstats/html/                  immutable/resumable source HTML
+data/raw/ufcstats/manifests/             per-run status and failures
+data/interim/ufcstats/ufcstats.sqlite3   transactional local source of truth
+data/interim/ufcstats/*.csv              normalized, derived table snapshots
+data/candidates/latestdatafetcher/run-*  immutable normalized + compatibility run bundles
+```
+
+Validate normalized relationships and the exact 71-feature source mapping without network
+access:
+
+```powershell
+python -m ufc_ml_latestdatafetcher validate
+python -m ufc_ml_latestdatafetcher status
+```
+
+`validate` requires complete A-Z fighter coverage by default. A deliberately bounded smoke
+repository can be inspected with `--allow-missing-fighter-directory`, but neither a bounded
+nor failed refresh publishes candidate files.
+Complete refreshes publish their own immutable, run-versioned candidates automatically;
+each bundle contains a consistent SQLite backup, normalized CSV views, and legacy-shaped
+review files. There is no separate unsafe export step.
+
+For a bounded smoke run, use an explicit date and event limit. `--skip-fighter-directory`
+is useful only for testing; normal refreshes should retain directory discovery:
+
+```powershell
+python -m ufc_ml_latestdatafetcher refresh `
+  --since 2026-08-15 `
+  --through 2026-08-15 `
+  --max-events 1 `
+  --skip-fighter-directory
+```
+
+`backfill` crawls all completed history through the configured snapshot cutoff. It retains
+draws, no-contests, and nonstandard formats because they affect historical fighter state,
+even though they are not eligible binary training labels:
+
+```powershell
+python -m ufc_ml_latestdatafetcher backfill
+```
+
+The fetcher never overwrites `data/processed`, edits the model configuration, or starts
+training. For the events actually crawled, the ID-rich normalized tables contain the raw
+primitives used by the current feature families. Run `backfill` to create a complete
+ID-rich historical corpus; an incremental refresh alone contains only post-cutoff events.
+The legacy-shaped exports are compatibility candidates only: they omit
+some normalized identity/provenance fields and are not the authoritative retraining input.
+Current fighter-page career summaries are retained in explicitly named `*_current` columns
+for inspection and must never backfill historical pre-fight state.
+
+### Build a raw-to-71-feature candidate
+
+The repository now includes a chronological raw-to-71 feature builder. It reads the legacy
+raw fight/profile CSVs and the ID-rich SQLite data fetched by `ufc_ml_latestdatafetcher`.
+All bouts contribute to each fighter's pre-fight state; labels are emitted only for decisive,
+standard three- or five-round bouts from 2001-02-23 onward. It preserves the existing
+fighter-A orientation contract, reconstructs the 71 model features, and creates current
+fighter snapshots.
+
+Build a reviewable candidate bundle with:
+
+```powershell
+python -m ufc_ml_api data build-features --config configs/rolling-2026.yaml
+```
+
+The command writes only to `data/candidates/featurebuilder/run-*`. By default it retains the
+trusted 8,116 processed baseline rows verbatim, seeds the feature state from the matching
+cutoff snapshot, and appends newer normalized fights. It does not overwrite `data/processed`
+or train a model. Each candidate includes its own `candidate-config.yaml`, 71-feature CSV,
+current fighter snapshots, cleaned profiles, manifest, and raw-reconstruction regression
+report. Validate the candidate before manually training from its config:
+
+```powershell
+python -m ufc_ml_api data validate --config data/candidates/featurebuilder/run-<run-id>/candidate-config.yaml
+python -m ufc_ml_api train --config data/candidates/featurebuilder/run-<run-id>/candidate-config.yaml --model all
+```
+
+`configs/rolling-2026.yaml` is the recommended current split policy: train through
+2024-12-31, tune and calibrate on all of 2025, and reserve all 2026 completed events
+for the final chronological test. It supplies 7,530 training rows, 513 validation rows,
+and 357 final-test rows with the current local snapshot. This is deliberately more
+recent than the legacy split while keeping a large independent tuning window and an
+unseen current-era holdout.
+
+Use `--reconstruct-baseline` only to audit the full historic rebuild. The legacy raw CSV
+lacks stable event/card ordering for a small number of historical Elo updates, so its
+regression report remains an audit artifact; bootstrap mode avoids changing those trusted
+historic rows. The candidate config deliberately updates the dataset cutoff, expected row
+count, and split labels. Do not move 2026 bouts into training until after you have evaluated
+the selected model on that untouched final-test period.
+
 ## Manual training
 
 Train the standardized logistic model and select L2/elastic-net settings by validation
@@ -225,6 +372,14 @@ prediction section above.
 Deploy the React application and prediction API separately. The public repository contains
 only source code and safe deployment templates; processed data, trained artifacts, tokens,
 and host-specific values stay outside Git.
+
+### Container build profiles
+
+Portable Docker Compose build definitions live in [builds/](builds/README.md):
+`ml.api.yaml` for the FastAPI service, `ml.web.yaml` for the static React site, and
+`ml.latestdatafetcher.yaml` for the one-shot scheduled scraper worker. The worker stores
+its HTML cache and SQLite data in a persistent volume; none of those data assets are copied
+into container images.
 
 ```text
 Vercel web app  ->  public FastAPI URL  ->  private GitHub asset repository

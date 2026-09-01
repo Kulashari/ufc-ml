@@ -1,0 +1,23 @@
+source:
+  base_url: http://ufcstats.com
+  completed_events_path: /statistics/events/completed?page=all
+  fighter_directory_path: /statistics/fighters?char={letter}&page=all
+  user_agent: Mozilla/5.0 (compatible; UFCMLLatestDataFetcher/0.1; research use)
+  timeout_seconds: 60
+  retry_attempts: 3
+  delay_seconds: 2.0
+  jitter_seconds: 0.5
+  headless: true
+  minimum_completed_event_count: 700
+  earliest_completed_event_date: 1994-03-11
+  minimum_fighter_directory_count: 4000
+
+storage:
+  raw_html_dir: data/raw/ufcstats/html
+  manifest_dir: data/raw/ufcstats/manifests
+  normalized_dir: data/interim/ufcstats
+  candidate_dir: data/candidates/latestdatafetcher
+  baseline_fights_path: data/ufc_gold_dataset_final.csv
+  baseline_fighters_path: data/ufc_fighters_final.csv
+
+model_config_path: configs/default.yaml
