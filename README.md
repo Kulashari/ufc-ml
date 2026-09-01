@@ -37,8 +37,9 @@ On macOS/Linux, activate the environment with `source .venv/bin/activate`.
 
 ## Data configuration
 
-The default configuration is [configs/default.yaml](configs/default.yaml). It expects
-these local processed assets:
+The production configuration is
+[configs/production-rolling-2026.yaml](configs/production-rolling-2026.yaml). It expects
+these approved processed assets:
 
 ```text
 data/processed/ufc_model_ready.csv
@@ -49,12 +50,12 @@ data/processed/ufc_model_feature_dictionary.csv
 
 The checked contract is:
 
-- 8,116 unique fights and 71 finite numeric `feature_` columns
+- 8,400 unique fights and 71 finite numeric `feature_` columns
 - binary target `target_a_win`
-- train: 5,618 fights through 2021-03-06
-- validation: 1,249 fights from 2021-03-13 through 2023-08-19
-- final test: 1,249 fights from 2023-08-26 through 2026-03-07
-- dataset and current fighter-snapshot cutoff: 2026-03-07
+- train: 7,530 fights through 2024-12-31
+- validation: 513 fights during 2025
+- final test: 357 fights during 2026 through 2026-08-29
+- dataset and current fighter-snapshot cutoff: 2026-08-29
 
 Datasets and generated artifacts are intentionally ignored by Git.
 
@@ -65,7 +66,7 @@ Scripts directory is not on `PATH`. After activating the virtual environment,
 Validate all configured assets without fitting a model:
 
 ```powershell
-python -m ufc_ml_api data validate --config configs/default.yaml
+python -m ufc_ml_api data validate --config configs/production-rolling-2026.yaml
 ```
 
 ## Latest UFCStats data fetcher
@@ -186,11 +187,11 @@ fighter snapshots.
 Build a reviewable candidate bundle with:
 
 ```powershell
-python -m ufc_ml_api data build-features --config configs/rolling-2026.yaml
+python -m ufc_ml_api data build-features --config configs/production-rolling-2026.yaml
 ```
 
 The command writes only to `data/candidates/featurebuilder/run-*`. By default it retains the
-trusted 8,116 processed baseline rows verbatim, seeds the feature state from the matching
+approved 8,400 processed baseline rows verbatim, seeds the feature state from the matching
 cutoff snapshot, and appends newer normalized fights. It does not overwrite `data/processed`
 or train a model. Each candidate includes its own `candidate-config.yaml`, 71-feature CSV,
 current fighter snapshots, cleaned profiles, manifest, and raw-reconstruction regression
@@ -201,7 +202,7 @@ python -m ufc_ml_api data validate --config data/candidates/featurebuilder/run-<
 python -m ufc_ml_api train --config data/candidates/featurebuilder/run-<run-id>/candidate-config.yaml --model all
 ```
 
-`configs/rolling-2026.yaml` is the recommended current split policy: train through
+`configs/production-rolling-2026.yaml` is the current split policy: train through
 2024-12-31, tune and calibrate on all of 2025, and reserve all 2026 completed events
 for the final chronological test. It supplies 7,530 training rows, 513 validation rows,
 and 357 final-test rows with the current local snapshot. This is deliberately more
@@ -221,19 +222,19 @@ Train the standardized logistic model and select L2/elastic-net settings by vali
 log loss:
 
 ```powershell
-python -m ufc_ml_api train --config configs/default.yaml --model logistic
+python -m ufc_ml_api train --config configs/production-rolling-2026.yaml --model logistic
 ```
 
 Train the configured XGBoost model with validation early stopping:
 
 ```powershell
-python -m ufc_ml_api train --config configs/default.yaml --model xgboost
+python -m ufc_ml_api train --config configs/production-rolling-2026.yaml --model xgboost
 ```
 
 Fit both families and apply the conservative model-selection guardrails:
 
 ```powershell
-python -m ufc_ml_api train --config configs/default.yaml --model all
+python -m ufc_ml_api train --config configs/production-rolling-2026.yaml --model all
 ```
 
 The `all` workflow selects XGBoost only when it meaningfully improves validation log
@@ -254,7 +255,7 @@ Run this once, after all modeling decisions are final:
 
 ```powershell
 python -m ufc_ml_api evaluate-final `
-  --config configs/default.yaml `
+  --config configs/production-rolling-2026.yaml `
   --run-dir artifacts/<run_id>
 ```
 
@@ -305,7 +306,7 @@ feature defaults used in training are present in the snapshot data; those predic
 are marked low confidence. Unknown fighters or rows missing a required reconstructable
 feature are rejected.
 
-The currently configured snapshot file contains one 2026-03-07 snapshot per fighter.
+The currently configured snapshot file contains one 2026-08-29 snapshot per fighter.
 Predictions use it only after the server's UTC date has passed that cutoff. The lookup
 implementation can consume multiple dated snapshots if a future point-in-time snapshot
 table is supplied.
@@ -334,8 +335,8 @@ start the API with the trained artifact you want to expose:
 ```powershell
 python -m pip install -e ".[web]"
 python -m ufc_ml_api serve `
-  --config configs/default.yaml `
-  --run-dir artifacts/20260723T181548Z-xgboost
+  --config configs/production-rolling-2026.yaml `
+  --run-dir artifacts/20260901T191756Z-logistic
 ```
 
 In a second terminal, start the React development server:
@@ -391,7 +392,7 @@ Store the following paths in a separate private repository, preserving their lay
 
 ```text
 data/processed/
-artifacts/20260723T181548Z-xgboost/
+artifacts/20260901T191756Z-logistic/
 ```
 
 The API can retrieve that repository at startup when these backend-only variables are set:
@@ -504,7 +505,7 @@ compatibility alias; no legacy source directory is retained.
 ## Troubleshooting
 
 - `Data file does not exist`: place the four processed CSVs at the configured paths or
-  update `configs/default.yaml`.
+  update `configs/production-rolling-2026.yaml`.
 - `No fighter matches`: confirm spelling or inspect the suggested candidates.
 - `matches multiple IDs`: pass the displayed stable fighter ID.
 - `snapshot ... strictly before`: update the snapshot table so it contains data before the

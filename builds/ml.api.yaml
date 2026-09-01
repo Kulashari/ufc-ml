@@ -14,7 +14,7 @@ services:
       UFC_ML_ASSETS_REF: ${UFC_ML_ASSETS_REF:-}
     command:
       - --config
-      - ${UFC_ML_API_CONFIG:-configs/default.yaml}
+      - ${UFC_ML_API_CONFIG:-configs/production-rolling-2026.yaml}
       - --run-dir
       - ${UFC_ML_API_RUN_DIR:-artifacts/active}
       - --host

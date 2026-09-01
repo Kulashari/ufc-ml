@@ -5,8 +5,8 @@ services:
     plan: free
     buildCommand: python -m pip install ".[web]"
     startCommand: >-
-      python -m ufc_ml_api serve --config configs/default.yaml
-      --run-dir artifacts/20260723T181548Z-xgboost --host 0.0.0.0 --port $PORT
+      python -m ufc_ml_api serve --config configs/production-rolling-2026.yaml
+      --run-dir artifacts/20260901T191756Z-logistic --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION

@@ -77,7 +77,7 @@ def root(
 @data_app.command("validate")
 def validate_data_command(
     config_path: Path = typer.Option(
-        Path("configs/default.yaml"),
+        Path("configs/production-rolling-2026.yaml"),
         "--config",
         exists=True,
         dir_okay=False,
@@ -154,7 +154,7 @@ def validate_data_command(
 @data_app.command("build-features")
 def build_features_command(
     config_path: Path = typer.Option(
-        Path("configs/default.yaml"),
+        Path("configs/production-rolling-2026.yaml"),
         "--config",
         exists=True,
         dir_okay=False,
@@ -289,7 +289,7 @@ def train_command(
         help="Model family to fit; 'all' compares both on validation only.",
     ),
     config_path: Path = typer.Option(
-        Path("configs/default.yaml"),
+        Path("configs/production-rolling-2026.yaml"),
         "--config",
         exists=True,
         dir_okay=False,
@@ -357,7 +357,7 @@ def evaluate_final_command(
         help="Trusted versioned artifact directory.",
     ),
     config_path: Path = typer.Option(
-        Path("configs/default.yaml"),
+        Path("configs/production-rolling-2026.yaml"),
         "--config",
         exists=True,
         dir_okay=False,
@@ -405,7 +405,7 @@ def serve_command(
         ),
     ),
     config_path: Path = typer.Option(
-        Path("configs/default.yaml"),
+        Path("configs/production-rolling-2026.yaml"),
         "--config",
         exists=True,
         dir_okay=False,
@@ -462,7 +462,7 @@ def predict_command(
         help="Trusted versioned artifact directory.",
     ),
     config_path: Path = typer.Option(
-        Path("configs/default.yaml"),
+        Path("configs/production-rolling-2026.yaml"),
         "--config",
         exists=True,
         dir_okay=False,

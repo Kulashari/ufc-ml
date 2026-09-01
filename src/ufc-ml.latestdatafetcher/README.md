@@ -40,5 +40,6 @@ from historical feature construction, which must emit each matchup before applyi
 fight's outcome and statistics.
 
 Configuration lives in `configs/latestdatafetcher.yaml`. The CLI separately loads
-`configs/default.yaml` for the authoritative dataset cutoff and 71-feature dictionary.
+`configs/production-rolling-2026.yaml` for the authoritative dataset cutoff and
+71-feature dictionary.
 Detailed storage, backfill, and retraining-handoff notes are in the root README.

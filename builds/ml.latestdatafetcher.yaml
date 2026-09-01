@@ -12,7 +12,7 @@ services:
       - --fetcher-config
       - configs/latestdatafetcher.yaml
       - --model-config
-      - configs/rolling-2026.yaml
+      - configs/production-rolling-2026.yaml
     volumes:
       - ufc_ml_data:/app/data
     restart: "no"

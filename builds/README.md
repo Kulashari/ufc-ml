@@ -53,10 +53,11 @@ environment, then start the service:
 
 ```powershell
 $env:UFC_ML_API_RUN_DIR = "artifacts/20260901T191756Z-logistic"
-$env:UFC_ML_API_CONFIG = "data/candidates/featurebuilder/run-rolling-2026-directory-20260901/candidate-config.yaml"
+$env:UFC_ML_API_CONFIG = "configs/production-rolling-2026.yaml"
 docker compose -f builds/ml.api.yaml up -d
 ```
 
-For a cloud API, promote the approved candidate data and matching configuration
-into the private asset bundle first. A fetcher run alone never changes the live
-API's model or snapshots.
+For local Compose, `data/processed` must contain the approved 8,400-row bundle.
+For a cloud API, promote that bundle and the selected artifact into the private
+asset repository first. A fetcher run alone never changes the live API's model
+or snapshots.

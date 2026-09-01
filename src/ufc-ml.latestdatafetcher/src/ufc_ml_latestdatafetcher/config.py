@@ -68,7 +68,7 @@ class StorageConfig(_StrictModel):
 class FetcherConfig(_StrictModel):
     source: SourceConfig = Field(default_factory=SourceConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
-    model_config_path: Path = Path("configs/default.yaml")
+    model_config_path: Path = Path("configs/production-rolling-2026.yaml")
     project_root: Path | None = Field(default=None, exclude=True)
 
     def resolve_paths(self, root: Path) -> Self:

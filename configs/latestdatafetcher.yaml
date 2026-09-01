@@ -20,4 +20,4 @@ storage:
   baseline_fights_path: data/ufc_gold_dataset_final.csv
   baseline_fighters_path: data/ufc_fighters_final.csv
 
-model_config_path: configs/default.yaml
+model_config_path: configs/production-rolling-2026.yaml

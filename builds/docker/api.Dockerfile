@@ -21,4 +21,4 @@ USER appuser
 EXPOSE 8000
 
 ENTRYPOINT ["python", "-m", "ufc_ml_api", "serve"]
-CMD ["--config", "configs/default.yaml", "--run-dir", "artifacts/active", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["--config", "configs/production-rolling-2026.yaml", "--run-dir", "artifacts/active", "--host", "0.0.0.0", "--port", "8000"]

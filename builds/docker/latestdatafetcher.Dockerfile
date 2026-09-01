@@ -22,4 +22,4 @@ RUN python -m pip install --upgrade pip \
 USER appuser
 
 ENTRYPOINT ["python", "-m", "ufc_ml_latestdatafetcher", "refresh"]
-CMD ["--fetcher-config", "configs/latestdatafetcher.yaml", "--model-config", "configs/rolling-2026.yaml"]
+CMD ["--fetcher-config", "configs/latestdatafetcher.yaml", "--model-config", "configs/production-rolling-2026.yaml"]

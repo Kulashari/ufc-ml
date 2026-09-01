@@ -316,7 +316,7 @@ def _discover_project_root(config_path: Path) -> Path:
 
 
 def load_config(
-    path: str | Path = "configs/default.yaml",
+    path: str | Path = "configs/production-rolling-2026.yaml",
     *,
     project_root: str | Path | None = None,
 ) -> AppConfig:

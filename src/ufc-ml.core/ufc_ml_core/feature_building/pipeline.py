@@ -517,7 +517,9 @@ def _suggested_config(
 ) -> dict[str, Any]:
     """Create a review-only config with paths/count/cutoff updated for the candidate."""
 
-    source_path = source_config_path or (config.project_root or Path.cwd()) / "configs/default.yaml"
+    source_path = source_config_path or (
+        (config.project_root or Path.cwd()) / "configs/production-rolling-2026.yaml"
+    )
     raw = yaml.safe_load(source_path.read_text(encoding="utf-8"))
     if not isinstance(raw, dict):
         raise DataValidationError(f"Candidate source config is not a mapping: {source_path}")
