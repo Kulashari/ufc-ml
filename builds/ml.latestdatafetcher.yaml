@@ -1,0 +1,21 @@
+services:
+  latest-data-fetcher:
+    image: ufc-ml-latestdatafetcher:local
+    build:
+      context: ..
+      dockerfile: builds/docker/latestdatafetcher.Dockerfile
+    environment:
+      # Chromium runs headlessly; the persistent data volume remains separate
+      # from this disposable worker container.
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+    command:
+      - --fetcher-config
+      - configs/latestdatafetcher.yaml
+      - --model-config
+      - configs/rolling-2026.yaml
+    volumes:
+      - ufc_ml_data:/app/data
+    restart: "no"
+
+volumes:
+  ufc_ml_data:
