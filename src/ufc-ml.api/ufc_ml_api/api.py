@@ -12,6 +12,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date
+from logging import getLogger
 from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import urlparse
@@ -37,6 +38,7 @@ from .assets import checkout_configured_assets
 
 _FIGHTER_ID_PATTERN = re.compile(r"\b[0-9a-f]{12,}\b", re.IGNORECASE)
 _LOCAL_CORS_ORIGINS = ("http://127.0.0.1:5173", "http://localhost:5173")
+_LOGGER = getLogger(__name__)
 _PUBLIC_PREDICTION_FIELDS = (
     "predicted_at",
     "model_cutoff",
@@ -371,6 +373,10 @@ def create_app(
             )
             return _public_prediction(result)
         except (UFCPredictorError, OSError, RuntimeError, ValueError) as error:
+            _LOGGER.exception(
+                "Prediction failed for configured artifact %s.",
+                resolved_run_dir.name,
+            )
             raise _friendly_prediction_error(error, availability.lookup) from error
 
     return app
