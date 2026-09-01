@@ -3,14 +3,14 @@ services:
     name: ufc-ml-api
     runtime: python
     plan: free
-    buildCommand: python -m pip install ".[web]"
+    buildCommand: python -m pip install -r requirements-production.txt ".[web]"
     startCommand: >-
       python -m ufc_ml_api serve --config configs/production-rolling-2026.yaml
       --run-dir artifacts/20260901T191756Z-logistic --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.11
+        value: 3.14.3
       - key: GITHUB_ASSETS_TOKEN
         sync: false
       - key: UFC_ML_ASSETS_REPOSITORY
